@@ -142,6 +142,30 @@ contract StoryFactory {
     }
 
     // -----------------------------------------------------------------------
+    // chainPlot
+    // -----------------------------------------------------------------------
+
+    /// @notice Chain a new plot to an existing storyline
+    /// @param storylineId The storyline to chain to
+    /// @param contentCID IPFS CID of the plot content
+    /// @param contentHash keccak256 hash of the plot content
+    function chainPlot(uint256 storylineId, string calldata contentCID, bytes32 contentHash) external {
+        Storyline storage s = storylines[storylineId];
+        require(msg.sender == s.writer, "Not writer");
+        require(bytes(contentCID).length >= 46 && bytes(contentCID).length <= 100, "Invalid CID");
+        require(!s.sunset, "Storyline sunset");
+        if (s.hasDeadline) {
+            require(block.timestamp <= s.lastPlotTime + 72 hours, "Deadline passed");
+        }
+
+        uint256 plotIndex = s.plotCount; // genesis = 0, so first chain = 1
+        s.plotCount++;
+        s.lastPlotTime = block.timestamp;
+
+        emit PlotChained(storylineId, plotIndex, msg.sender, contentCID, contentHash);
+    }
+
+    // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
 
