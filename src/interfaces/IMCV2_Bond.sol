@@ -37,33 +37,20 @@ interface IMCV2_Bond {
     /// @param tokensToMint Amount of tokens to mint
     /// @param maxReserveAmount Maximum reserve token amount willing to spend (slippage)
     /// @param receiver Address to receive the minted tokens
-    function mint(
-        address token,
-        uint256 tokensToMint,
-        uint256 maxReserveAmount,
-        address receiver
-    ) external;
+    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external;
 
     /// @notice Burn tokens on the bonding curve
     /// @param token Address of the token to burn
     /// @param tokensToBurn Amount of tokens to burn
     /// @param minRefund Minimum reserve token refund (slippage)
     /// @param receiver Address to receive the refund
-    function burn(
-        address token,
-        uint256 tokensToBurn,
-        uint256 minRefund,
-        address receiver
-    ) external;
+    function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external;
 
     /// @notice Get the reserve amount required to mint a given number of tokens
     /// @param token Address of the token
     /// @param tokensToMint Amount of tokens to mint
     /// @return reserveAmount Required reserve token amount
-    function getReserveForToken(
-        address token,
-        uint256 tokensToMint
-    ) external view returns (uint256 reserveAmount);
+    function getReserveForToken(address token, uint256 tokensToMint) external view returns (uint256 reserveAmount);
 
     /// @notice Claim accumulated royalties for a token
     /// @param token Address of the token
