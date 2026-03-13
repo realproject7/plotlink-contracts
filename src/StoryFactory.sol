@@ -158,10 +158,11 @@ contract StoryFactory {
             require(block.timestamp <= s.lastPlotTime + 72 hours, "Deadline passed");
         }
 
+        uint256 plotIndex = s.plotCount; // genesis = 0, so first chain = 1
         s.plotCount++;
         s.lastPlotTime = block.timestamp;
 
-        emit PlotChained(storylineId, s.plotCount, msg.sender, contentCID, contentHash);
+        emit PlotChained(storylineId, plotIndex, msg.sender, contentCID, contentHash);
     }
 
     // -----------------------------------------------------------------------
