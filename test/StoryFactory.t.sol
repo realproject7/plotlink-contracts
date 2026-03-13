@@ -236,12 +236,26 @@ contract StoryFactoryTest is Test {
     }
 
     function test_chainPlot_revert_sunset() public {
-        // We can't directly set sunset=true without modifying storage,
-        // but we can trigger it via deadline expiration path:
-        // The contract doesn't auto-set sunset — that would need a separate mechanism.
-        // For now, test that sunset=false allows writes (covered above).
-        // A full sunset test would require the contract to have a sunset-setting mechanism.
-        // Skip for now — the require(!s.sunset) check is syntactically present.
+        vm.prank(writer);
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, false);
+
+        // Storyline struct is at mapping slot: keccak256(abi.encode(id, 2))
+        // where 2 is the storage slot of `storylines` mapping.
+        // Struct layout: writer(slot+0), token(slot+1), plotCount(slot+2),
+        //   lastPlotTime(slot+3), hasDeadline+sunset packed in slot+4
+        // hasDeadline is at byte 0, sunset is at byte 1
+        bytes32 baseSlot = keccak256(abi.encode(id, uint256(2)));
+        bytes32 flagsSlot = bytes32(uint256(baseSlot) + 4);
+
+        // Read current value and set sunset bit (byte 1 = offset 1 from right)
+        bytes32 current = vm.load(address(factory), flagsSlot);
+        // sunset is the second bool in the packed slot — set byte at offset 1
+        bytes32 withSunset = current | bytes32(uint256(1) << 8);
+        vm.store(address(factory), flagsSlot, withSunset);
+
+        vm.prank(writer);
+        vm.expectRevert("Storyline sunset");
+        factory.chainPlot(id, VALID_CID, FAKE_HASH);
     }
 
     // ===================================================================
