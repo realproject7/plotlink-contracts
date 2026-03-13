@@ -166,6 +166,23 @@ contract StoryFactory {
     }
 
     // -----------------------------------------------------------------------
+    // donate
+    // -----------------------------------------------------------------------
+
+    /// @notice Donate $PLOT directly to a storyline's writer
+    /// @param storylineId The storyline whose writer receives the donation
+    /// @param amount Amount of $PLOT to donate (in wei)
+    function donate(uint256 storylineId, uint256 amount) external {
+        require(amount > 0, "Zero amount");
+        Storyline storage s = storylines[storylineId];
+        require(s.writer != address(0), "Storyline does not exist");
+
+        require(PLOT_TOKEN.transferFrom(msg.sender, s.writer, amount), "Transfer failed");
+
+        emit Donation(storylineId, msg.sender, amount);
+    }
+
+    // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
 
