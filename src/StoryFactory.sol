@@ -102,6 +102,7 @@ contract StoryFactory {
         external
         returns (uint256 storylineId)
     {
+        require(bytes(title).length > 0, "Empty title");
         require(bytes(openingCID).length >= 46 && bytes(openingCID).length <= 100, "Invalid CID");
 
         storylineId = ++storylineCount;
