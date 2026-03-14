@@ -24,13 +24,7 @@ contract DeployBaseSepolia is Script {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        StoryFactory factory = new StoryFactory(
-            MCV2_BOND,
-            PLOT_TOKEN,
-            MAX_SUPPLY,
-            stepRanges,
-            stepPrices
-        );
+        StoryFactory factory = new StoryFactory(MCV2_BOND, PLOT_TOKEN, MAX_SUPPLY, stepRanges, stepPrices);
 
         vm.stopBroadcast();
 
@@ -47,11 +41,7 @@ contract DeployBaseSepolia is Script {
     /// @dev Mintpad Medium J-Curve: 500 steps, steepness 0.85, exponent 4
     ///      For step i: progress = i/500, scarcity = 1 - progress*0.85
     ///      multiplier = (1/scarcity)^4, price = INITIAL_PRICE * multiplier
-    function _generateCurve()
-        internal
-        pure
-        returns (uint128[] memory stepRanges, uint128[] memory stepPrices)
-    {
+    function _generateCurve() internal pure returns (uint128[] memory stepRanges, uint128[] memory stepPrices) {
         stepRanges = new uint128[](STEP_COUNT);
         stepPrices = new uint128[](STEP_COUNT);
 
