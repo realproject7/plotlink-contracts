@@ -151,7 +151,9 @@ contract StoryFactory {
     /// @param title Human-readable title for the plot chapter
     /// @param contentCID IPFS CID of the plot content
     /// @param contentHash keccak256 hash of the plot content
-    function chainPlot(uint256 storylineId, string calldata title, string calldata contentCID, bytes32 contentHash) external {
+    function chainPlot(uint256 storylineId, string calldata title, string calldata contentCID, bytes32 contentHash)
+        external
+    {
         Storyline storage s = storylines[storylineId];
         require(msg.sender == s.writer, "Not writer");
         require(bytes(contentCID).length >= 46 && bytes(contentCID).length <= 100, "Invalid CID");
