@@ -17,7 +17,7 @@ contract StoryFactory {
         address token; // storyline token address on Mint Club
         uint256 plotCount; // total plots chained
         uint256 lastPlotTime; // timestamp of last plot (for deadline)
-        bool hasDeadline; // whether 72h deadline is enabled
+        bool hasDeadline; // whether 168h (7-day) deadline is enabled
         bool sunset; // true if deadline expired
     }
 
@@ -39,6 +39,7 @@ contract StoryFactory {
         uint256 indexed storylineId,
         uint256 indexed plotIndex,
         address indexed writer,
+        string title,
         string contentCID,
         bytes32 contentHash
     );
@@ -96,7 +97,7 @@ contract StoryFactory {
     /// @param title Human-readable title of the storyline
     /// @param openingCID IPFS CID of the genesis plot content
     /// @param openingHash keccak256 hash of the genesis plot content
-    /// @param hasDeadline Whether the 72h deadline mechanism is enabled
+    /// @param hasDeadline Whether the 168h (7-day) deadline mechanism is enabled
     /// @return storylineId The ID of the newly created storyline
     function createStoryline(string calldata title, string calldata openingCID, bytes32 openingHash, bool hasDeadline)
         external
@@ -110,7 +111,7 @@ contract StoryFactory {
         // 1. Create token on Mint Club V2 bonding curve
         //    Factory becomes initial creator; we transfer to writer below
         TokenParams memory tp =
-            TokenParams({name: title, symbol: string(abi.encodePacked("PLOT-", _uint2str(storylineId)))});
+            TokenParams({name: title, symbol: string(abi.encodePacked("PLT-", _uint2str(storylineId)))});
 
         BondParams memory bp = BondParams({
             mintRoyalty: MINT_ROYALTY,
@@ -138,7 +139,7 @@ contract StoryFactory {
 
         // 4. Emit events
         emit StorylineCreated(storylineId, msg.sender, tokenAddress, title, hasDeadline, openingCID, openingHash);
-        emit PlotChained(storylineId, 0, msg.sender, openingCID, openingHash);
+        emit PlotChained(storylineId, 0, msg.sender, title, openingCID, openingHash);
     }
 
     // -----------------------------------------------------------------------
@@ -147,22 +148,25 @@ contract StoryFactory {
 
     /// @notice Chain a new plot to an existing storyline
     /// @param storylineId The storyline to chain to
+    /// @param title Human-readable title for the plot chapter
     /// @param contentCID IPFS CID of the plot content
     /// @param contentHash keccak256 hash of the plot content
-    function chainPlot(uint256 storylineId, string calldata contentCID, bytes32 contentHash) external {
+    function chainPlot(uint256 storylineId, string calldata title, string calldata contentCID, bytes32 contentHash)
+        external
+    {
         Storyline storage s = storylines[storylineId];
         require(msg.sender == s.writer, "Not writer");
         require(bytes(contentCID).length >= 46 && bytes(contentCID).length <= 100, "Invalid CID");
         require(!s.sunset, "Storyline sunset");
         if (s.hasDeadline) {
-            require(block.timestamp <= s.lastPlotTime + 72 hours, "Deadline passed");
+            require(block.timestamp <= s.lastPlotTime + 168 hours, "Deadline passed");
         }
 
         uint256 plotIndex = s.plotCount; // genesis = 0, so first chain = 1
         s.plotCount++;
         s.lastPlotTime = block.timestamp;
 
-        emit PlotChained(storylineId, plotIndex, msg.sender, contentCID, contentHash);
+        emit PlotChained(storylineId, plotIndex, msg.sender, title, contentCID, contentHash);
     }
 
     // -----------------------------------------------------------------------

@@ -138,7 +138,7 @@ contract StoryFactoryTest is Test {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit StoryFactory.PlotChained(1, 0, writer, VALID_CID, FAKE_HASH);
+        emit StoryFactory.PlotChained(1, 0, writer, "My Story", VALID_CID, FAKE_HASH);
 
         factory.createStoryline("My Story", VALID_CID, FAKE_HASH, true);
     }
@@ -167,7 +167,7 @@ contract StoryFactoryTest is Test {
         bytes32 hash2 = keccak256("chapter 2");
 
         vm.prank(writer);
-        factory.chainPlot(id, cid2, hash2);
+        factory.chainPlot(id, "Chapter 2", cid2, hash2);
 
         (,, uint256 plotCount,,,) = factory.storylines(id);
         assertEq(plotCount, 2);
@@ -181,10 +181,10 @@ contract StoryFactoryTest is Test {
         bytes32 hash2 = keccak256("chapter 2");
 
         vm.expectEmit(true, true, true, true);
-        emit StoryFactory.PlotChained(id, 1, writer, cid2, hash2);
+        emit StoryFactory.PlotChained(id, 1, writer, "Chapter 2", cid2, hash2);
 
         vm.prank(writer);
-        factory.chainPlot(id, cid2, hash2);
+        factory.chainPlot(id, "Chapter 2", cid2, hash2);
     }
 
     // ===================================================================
@@ -197,7 +197,7 @@ contract StoryFactoryTest is Test {
 
         vm.prank(other);
         vm.expectRevert("Not writer");
-        factory.chainPlot(id, VALID_CID, FAKE_HASH);
+        factory.chainPlot(id, "Chapter 2", VALID_CID, FAKE_HASH);
     }
 
     function test_chainPlot_revert_invalidCID() public {
@@ -206,30 +206,30 @@ contract StoryFactoryTest is Test {
 
         vm.prank(writer);
         vm.expectRevert("Invalid CID");
-        factory.chainPlot(id, "too-short", FAKE_HASH);
+        factory.chainPlot(id, "Chapter 2", "too-short", FAKE_HASH);
     }
 
     function test_chainPlot_revert_deadlineExpired() public {
         vm.prank(writer);
         uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, true); // deadline enabled
 
-        // Warp past 72 hours
-        vm.warp(block.timestamp + 72 hours + 1);
+        // Warp past 168 hours (7 days)
+        vm.warp(block.timestamp + 168 hours + 1);
 
         vm.prank(writer);
         vm.expectRevert("Deadline passed");
-        factory.chainPlot(id, VALID_CID, FAKE_HASH);
+        factory.chainPlot(id, "Chapter 2", VALID_CID, FAKE_HASH);
     }
 
     function test_chainPlot_noDeadline_allowsLateWrite() public {
         vm.prank(writer);
         uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, false); // no deadline
 
-        // Warp past 72 hours — should still work
+        // Warp past 168 hours — should still work
         vm.warp(block.timestamp + 100 days);
 
         vm.prank(writer);
-        factory.chainPlot(id, VALID_CID, FAKE_HASH);
+        factory.chainPlot(id, "Late Chapter", VALID_CID, FAKE_HASH);
 
         (,, uint256 plotCount,,,) = factory.storylines(id);
         assertEq(plotCount, 2);
@@ -255,7 +255,7 @@ contract StoryFactoryTest is Test {
 
         vm.prank(writer);
         vm.expectRevert("Storyline sunset");
-        factory.chainPlot(id, VALID_CID, FAKE_HASH);
+        factory.chainPlot(id, "Chapter 2", VALID_CID, FAKE_HASH);
     }
 
     // ===================================================================

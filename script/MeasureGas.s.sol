@@ -34,6 +34,7 @@ contract MeasureGas is Script {
         gasStart = gasleft();
         factory.chainPlot(
             storylineId,
+            "Chapter 1",
             "QmTestCID11111111111111111111111111111111111111", // 50 chars
             keccak256("Second plot content for gas measurement")
         );
