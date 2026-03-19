@@ -81,4 +81,33 @@ contract DeployBaseTest is Test {
             assertTrue(prices[i] > 0, "Price must be non-zero");
         }
     }
+
+    /// @dev Full-table snapshot: keccak256 of the entire packed price and range arrays.
+    ///      Any change to the curve (growth rate, rounding, step count) breaks this test.
+    ///      Regenerate hashes via: forge script script/DumpCurve.s.sol:DumpCurve
+    function test_curveFullTableSnapshot() public view {
+        (uint128[] memory ranges, uint128[] memory prices) = deploy.generateCurve();
+
+        bytes32 priceHash = keccak256(abi.encodePacked(prices));
+        bytes32 rangeHash = keccak256(abi.encodePacked(ranges));
+
+        assertEq(priceHash, 0x4f977f98990ba083f60f9fe2578c334be98ae66c4fcc9191f1c1f2324a3f93f6);
+        assertEq(rangeHash, 0x2fa88b79c2a4811f9e33b02deb52b4991e4dcdf78fc23a2529e5b3fb22194844);
+    }
+
+    /// @dev Spot-check 10 evenly-spaced prices across the curve to catch drift
+    function test_curveSpotCheckPrices() public view {
+        (, uint128[] memory prices) = deploy.generateCurve();
+
+        assertEq(prices[0], 1_000_000_000_000_000);
+        assertEq(prices[50], 2_129_342_549_416_973);
+        assertEq(prices[100], 4_534_099_692_757_616);
+        assertEq(prices[150], 9_654_651_399_087_347);
+        assertEq(prices[200], 20_558_060_023_865_116);
+        assertEq(prices[250], 43_775_151_942_284_832);
+        assertEq(prices[300], 93_212_293_637_901_728);
+        assertEq(prices[350], 198_480_902_971_936_588);
+        assertEq(prices[400], 422_633_831_944_853_651);
+        assertEq(prices[450], 899_932_201_183_334_867);
+    }
 }
