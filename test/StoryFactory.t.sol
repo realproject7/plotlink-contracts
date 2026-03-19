@@ -13,10 +13,12 @@ contract MockBond is IMCV2_Bond {
     uint256 public createCount;
     address public lastCreator;
     string public lastSymbol;
+    uint256 public lastValue;
 
     function createToken(TokenParams calldata tp, BondParams calldata) external payable returns (address) {
         createCount++;
         lastSymbol = tp.symbol;
+        lastValue = msg.value;
         // Deterministic fake token address
         return address(uint160(0xBEEF0000 + createCount));
     }
@@ -153,6 +155,20 @@ contract StoryFactoryTest is Test {
         vm.prank(writer);
         factory.createStoryline("Second", VALID_CID, FAKE_HASH, false);
         assertEq(bond.lastSymbol(), "PL-2");
+    }
+
+    function test_createStoryline_forwardsCreationFee() public {
+        uint256 fee = 0.0007 ether;
+        vm.deal(writer, fee);
+        vm.prank(writer);
+        factory.createStoryline{value: fee}("Fee Story", VALID_CID, FAKE_HASH, false);
+        assertEq(bond.lastValue(), fee);
+    }
+
+    function test_createStoryline_zeroFeeForwarded() public {
+        vm.prank(writer);
+        factory.createStoryline("Free Story", VALID_CID, FAKE_HASH, false);
+        assertEq(bond.lastValue(), 0);
     }
 
     function test_createStoryline_revert_emptyTitle() public {
