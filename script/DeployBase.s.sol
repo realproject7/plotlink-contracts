@@ -20,7 +20,7 @@ contract DeployBase is Script {
     uint128 constant FINAL_PRICE = 1_888_242_100_000_000_000; // 1.8882421 PL_TEST
 
     function run() external {
-        (uint128[] memory stepRanges, uint128[] memory stepPrices) = _generateCurve();
+        (uint128[] memory stepRanges, uint128[] memory stepPrices) = generateCurve();
 
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
@@ -44,7 +44,7 @@ contract DeployBase is Script {
     ///      Price: INITIAL_PRICE * GROWTH_RATE^i where GROWTH_RATE = (FINAL/INITIAL)^(1/499)
     ///      Pre-computed GROWTH_RATE ≈ 1.015231 (18-decimal fixed-point)
     ///      Last step snapped to exact FINAL_PRICE to avoid rounding drift.
-    function _generateCurve() internal pure returns (uint128[] memory stepRanges, uint128[] memory stepPrices) {
+    function generateCurve() public pure returns (uint128[] memory stepRanges, uint128[] memory stepPrices) {
         stepRanges = new uint128[](STEP_COUNT);
         stepPrices = new uint128[](STEP_COUNT);
 
