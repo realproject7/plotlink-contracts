@@ -39,10 +39,13 @@ contract DeployBaseTest is Test {
         assertEq(prices[0], 1e15);
     }
 
-    function test_curveFinalPrice() public view {
+    function test_curveFinalPriceCloseToTarget() public view {
         (, uint128[] memory prices) = deploy.generateCurve();
-        // Step 499 snapped to exact 1.8882421 PL_TEST
-        assertEq(prices[499], 1_888_242_100_000_000_000);
+        // Step 499 should be ~1.8882421 PL_TEST (within ~40k wei per issue #20)
+        uint256 target = 1_888_242_100_000_000_000;
+        uint256 actual = prices[499];
+        uint256 diff = actual > target ? actual - target : target - actual;
+        assertTrue(diff < 50_000, "Final price drift exceeds 50k wei");
     }
 
     function test_curveMonotonicallyIncreasing() public view {
@@ -91,7 +94,7 @@ contract DeployBaseTest is Test {
         bytes32 priceHash = keccak256(abi.encodePacked(prices));
         bytes32 rangeHash = keccak256(abi.encodePacked(ranges));
 
-        assertEq(priceHash, 0x4f977f98990ba083f60f9fe2578c334be98ae66c4fcc9191f1c1f2324a3f93f6);
+        assertEq(priceHash, 0x3d876be285e5c9960ae0b657998edae411756de7b15351dac27a06e0fe538e70);
         assertEq(rangeHash, 0x2fa88b79c2a4811f9e33b02deb52b4991e4dcdf78fc23a2529e5b3fb22194844);
     }
 
@@ -100,14 +103,14 @@ contract DeployBaseTest is Test {
         (, uint128[] memory prices) = deploy.generateCurve();
 
         assertEq(prices[0], 1_000_000_000_000_000);
-        assertEq(prices[50], 2_129_342_549_416_973);
-        assertEq(prices[100], 4_534_099_692_757_616);
-        assertEq(prices[150], 9_654_651_399_087_347);
-        assertEq(prices[200], 20_558_060_023_865_116);
-        assertEq(prices[250], 43_775_151_942_284_832);
-        assertEq(prices[300], 93_212_293_637_901_728);
-        assertEq(prices[350], 198_480_902_971_936_588);
-        assertEq(prices[400], 422_633_831_944_853_651);
-        assertEq(prices[450], 899_932_201_183_334_867);
+        assertEq(prices[50], 2_129_424_724_105_709);
+        assertEq(prices[100], 4_534_449_655_632_720);
+        assertEq(prices[150], 9_655_769_206_917_063);
+        assertEq(prices[200], 20_561_233_679_468_092);
+        assertEq(prices[250], 43_783_599_355_175_084);
+        assertEq(prices[300], 93_233_878_977_250_204);
+        assertEq(prices[350], 198_534_527_018_439_521);
+        assertEq(prices[400], 422_764_330_421_705_389);
+        assertEq(prices[450], 900_244_817_669_990_563);
     }
 }
