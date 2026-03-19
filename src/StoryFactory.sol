@@ -101,6 +101,7 @@ contract StoryFactory {
     /// @return storylineId The ID of the newly created storyline
     function createStoryline(string calldata title, string calldata openingCID, bytes32 openingHash, bool hasDeadline)
         external
+        payable
         returns (uint256 storylineId)
     {
         require(bytes(title).length > 0, "Empty title");
@@ -122,7 +123,7 @@ contract StoryFactory {
             stepPrices: stepPrices
         });
 
-        address tokenAddress = BOND.createToken(tp, bp);
+        address tokenAddress = BOND.createToken{value: msg.value}(tp, bp);
 
         // 2. Transfer creator role to writer (royalties go directly to them)
         BOND.updateBondCreator(tokenAddress, msg.sender);
