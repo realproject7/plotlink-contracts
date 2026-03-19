@@ -111,7 +111,7 @@ contract StoryFactory {
         // 1. Create token on Mint Club V2 bonding curve
         //    Factory becomes initial creator; we transfer to writer below
         TokenParams memory tp =
-            TokenParams({name: title, symbol: string(abi.encodePacked("PLT-", _uint2str(storylineId)))});
+            TokenParams({name: title, symbol: string(abi.encodePacked("PL-", _uint2str(storylineId)))});
 
         BondParams memory bp = BondParams({
             mintRoyalty: MINT_ROYALTY,

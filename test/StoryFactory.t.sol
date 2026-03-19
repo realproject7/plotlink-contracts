@@ -12,9 +12,11 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 contract MockBond is IMCV2_Bond {
     uint256 public createCount;
     address public lastCreator;
+    string public lastSymbol;
 
-    function createToken(TokenParams calldata, BondParams calldata) external payable returns (address) {
+    function createToken(TokenParams calldata tp, BondParams calldata) external payable returns (address) {
         createCount++;
+        lastSymbol = tp.symbol;
         // Deterministic fake token address
         return address(uint160(0xBEEF0000 + createCount));
     }
@@ -141,6 +143,16 @@ contract StoryFactoryTest is Test {
         emit StoryFactory.PlotChained(1, 0, writer, "My Story", VALID_CID, FAKE_HASH);
 
         factory.createStoryline("My Story", VALID_CID, FAKE_HASH, true);
+    }
+
+    function test_createStoryline_symbolPrefix() public {
+        vm.prank(writer);
+        factory.createStoryline("First", VALID_CID, FAKE_HASH, false);
+        assertEq(bond.lastSymbol(), "PL-1");
+
+        vm.prank(writer);
+        factory.createStoryline("Second", VALID_CID, FAKE_HASH, false);
+        assertEq(bond.lastSymbol(), "PL-2");
     }
 
     function test_createStoryline_revert_emptyTitle() public {
