@@ -18,7 +18,7 @@ contract E2ETest is Script {
     // -----------------------------------------------------------------------
     // Base mainnet addresses
     // -----------------------------------------------------------------------
-    StoryFactory constant FACTORY = StoryFactory(0xc278F4099298118efA8dF30DF0F4876632571948);
+    StoryFactory constant FACTORY = StoryFactory(0x27B4FCf333f29a3865b3B76ea00C955D7b64BD0F);
     IERC20 constant PL_TEST = IERC20(0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1);
     IMCV2_Bond constant BOND = IMCV2_Bond(0xc5a076cad94176c2996B32d8466Be1cE757FAa27);
 
@@ -434,11 +434,45 @@ contract E2ETest is Script {
         console.log("[F5] Buy/sell royalty diff              PASS  cost=%d  refund=%d", buyCost, sellRefund);
         scenariosPassed++;
 
+        // F6: updateCurve by owner + create storyline with new curve
+        uint128[] memory newRanges = new uint128[](2);
+        newRanges[0] = 500_000e18;
+        newRanges[1] = 1_000_000e18;
+        uint128[] memory newPrices = new uint128[](2);
+        newPrices[0] = 2e15; // 0.002 PL_TEST (double the original)
+        newPrices[1] = 2e18;
+        FACTORY.updateCurve(newRanges, newPrices);
+        console.log("[F6] updateCurve by owner              PASS");
+
+        uint256 idF6 = _verifyF6();
+
         // Serialize edge case storyline IDs
         string memory fKey = "edgeCasesF";
         vm.serializeUint(fKey, "f1StorylineId", idF1);
         vm.serializeAddress(fKey, "f1Token", tokenF1);
-        string memory fJson = vm.serializeUint(fKey, "f2StorylineId", idF2);
+        vm.serializeUint(fKey, "f2StorylineId", idF2);
+        string memory fJson = vm.serializeUint(fKey, "f6StorylineId", idF6);
         vm.serializeString(resultsJson, "edgeCasesF", fJson);
+    }
+
+    function _verifyF6() internal returns (uint256 idF6) {
+        idF6 = FACTORY.createStoryline{value: creationFee}("Updated Curve Story", CID_46, HASH_A, false);
+        require(idF6 > 0, "F6: failed to create with new curve");
+
+        // Prove the new curve is used: buy 1 token, cost should reflect new price (2e15)
+        (, address tokenF6,,,) = FACTORY.storylines(idF6);
+        IERC20Extended storyTokenF6 = IERC20Extended(tokenF6);
+        storyTokenF6.approve(address(BOND), type(uint256).max);
+        uint256 balBefore = PL_TEST.balanceOf(deployer);
+        BOND.mint(tokenF6, 1e18, type(uint256).max, deployer);
+        uint256 f6Cost = balBefore - PL_TEST.balanceOf(deployer);
+        // New curve first step is 2e15 + 1% royalty. Original was 1e15 + 1%.
+        // So cost should be > 1.5e15 (proving new curve was applied)
+        require(f6Cost > 1.5e15, "F6: cost too low, new curve not applied");
+        console.log("[F6] Create+buy after updateCurve      PASS  cost=%d (new curve)", f6Cost);
+        scenariosPassed += 2;
+
+        // Sell back to clean up
+        BOND.burn(tokenF6, 1e18, 0, deployer);
     }
 }
