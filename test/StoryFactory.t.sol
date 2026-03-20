@@ -372,4 +372,64 @@ contract StoryFactoryTest is Test {
         assertEq(factory.MINT_ROYALTY(), 100); // 1%
         assertEq(factory.BURN_ROYALTY(), 100); // 1%
     }
+
+    // ===================================================================
+    // Input validations (#42)
+    // ===================================================================
+
+    function test_chainPlot_revert_emptyTitle() public {
+        vm.prank(writer);
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, false);
+
+        vm.prank(writer);
+        vm.expectRevert("Empty title");
+        factory.chainPlot(id, "", VALID_CID, FAKE_HASH);
+    }
+
+    function test_createStoryline_revert_emptyHash() public {
+        vm.prank(writer);
+        vm.expectRevert("Empty hash");
+        factory.createStoryline("Title", VALID_CID, bytes32(0), false);
+    }
+
+    function test_chainPlot_revert_emptyHash() public {
+        vm.prank(writer);
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, false);
+
+        vm.prank(writer);
+        vm.expectRevert("Empty hash");
+        factory.chainPlot(id, "Chapter 2", VALID_CID, bytes32(0));
+    }
+
+    function test_constructor_revert_zeroBond() public {
+        uint128[] memory ranges = new uint128[](1);
+        ranges[0] = 1e18;
+        uint128[] memory prices = new uint128[](1);
+        prices[0] = 1e15;
+
+        vm.expectRevert("Zero bond address");
+        new StoryFactory(address(0), address(plot), 1e18, ranges, prices);
+    }
+
+    function test_constructor_revert_zeroToken() public {
+        uint128[] memory ranges = new uint128[](1);
+        ranges[0] = 1e18;
+        uint128[] memory prices = new uint128[](1);
+        prices[0] = 1e15;
+
+        vm.expectRevert("Zero token address");
+        new StoryFactory(address(bond), address(0), 1e18, ranges, prices);
+    }
+
+    function test_constructor_revert_tooManySteps() public {
+        uint128[] memory ranges = new uint128[](1001);
+        uint128[] memory prices = new uint128[](1001);
+        for (uint256 i = 0; i < 1001; i++) {
+            ranges[i] = uint128(i + 1);
+            prices[i] = uint128(i + 1);
+        }
+
+        vm.expectRevert("Too many steps");
+        new StoryFactory(address(bond), address(plot), 1e18, ranges, prices);
+    }
 }
