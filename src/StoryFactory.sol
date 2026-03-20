@@ -78,8 +78,11 @@ contract StoryFactory {
         uint128[] memory _stepRanges,
         uint128[] memory _stepPrices
     ) {
+        require(_bond != address(0), "Zero bond address");
+        require(_plotToken != address(0), "Zero token address");
         require(_stepRanges.length == _stepPrices.length, "Step arrays length mismatch");
         require(_stepRanges.length > 0, "Empty step arrays");
+        require(_stepRanges.length <= 1000, "Too many steps");
 
         BOND = IMCV2_Bond(_bond);
         PLOT_TOKEN = IERC20(_plotToken);
@@ -105,6 +108,7 @@ contract StoryFactory {
     {
         require(bytes(title).length > 0, "Empty title");
         require(bytes(openingCID).length >= 46 && bytes(openingCID).length <= 100, "Invalid CID");
+        require(openingHash != bytes32(0), "Empty hash");
 
         storylineId = ++storylineCount;
 
@@ -155,7 +159,9 @@ contract StoryFactory {
     {
         Storyline storage s = storylines[storylineId];
         require(msg.sender == s.writer, "Not writer");
+        require(bytes(title).length > 0, "Empty title");
         require(bytes(contentCID).length >= 46 && bytes(contentCID).length <= 100, "Invalid CID");
+        require(contentHash != bytes32(0), "Empty hash");
         if (s.hasDeadline) {
             require(block.timestamp <= uint256(s.lastPlotTime) + 168 hours, "Deadline passed");
         }

@@ -407,11 +407,11 @@ contract E2ETest is Script {
         console.log("[F2] CID exact max (100 chars)         PASS  storylineId=%d", idF2);
         scenariosPassed++;
 
-        // F4: chainPlot with empty title (title not validated in chainPlot) — use F1's storyline
-        FACTORY.chainPlot(idF1, "", CID_46, HASH_B);
+        // F4: chainPlot to F1 storyline (verifies cross-storyline chaining)
+        FACTORY.chainPlot(idF1, "F1 Chapter 2", CID_46, HASH_B);
         (,, uint24 pc,,) = FACTORY.storylines(idF1);
         require(pc == 2, "F4: plotCount should be 2");
-        console.log("[F4] chainPlot with empty title        PASS  plotCount=%d", pc);
+        console.log("[F4] chainPlot to F1 storyline         PASS  plotCount=%d", pc);
         scenariosPassed++;
 
         // F5: Buy then sell same amount - refund < cost due to royalties
