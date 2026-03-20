@@ -1,0 +1,41 @@
+{
+  "bond": "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+  "broadcastArtifact": "broadcast/E2ETest.s.sol/8453/run-latest.json",
+  "chainId": 8453,
+  "deployer": "0x017596303EE2F3C1250Aa67d2d33DBae1D1c4dBf",
+  "donor": "0x43F43406e842d6ad8a8aB7546015D5F955C349BB",
+  "edgeCasesF": {
+    "f1StorylineId": 18,
+    "f1Token": "0x1b711ad9B5D0A52fc9F4c937D7A883184C2a3d78",
+    "f2StorylineId": 19,
+    "f6StorylineId": 20
+  },
+  "factory": "0x337c5b96f03fB335b433291695A4171fd5dED8B0",
+  "gasUsed": 3208070,
+  "plTest": "0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1",
+  "royaltiesClaimed": 353664000000000000,
+  "scenariosPassed": 21,
+  "storylineA1": {
+    "hasDeadline": true,
+    "plotCount": 4,
+    "storylineId": 15,
+    "token": "0x610769830269147E1ad357F326928Cf7Fa40337C"
+  },
+  "storylineA2": {
+    "hasDeadline": false,
+    "plotCount": 2,
+    "storylineId": 16,
+    "token": "0x25d6a1801a49CC954A9EA20C7973C94960E74136"
+  },
+  "storylineA3": {
+    "storylineId": 17,
+    "token": "0x25617B85E3fe953c96F78864299D7757b7a7c379"
+  },
+  "tradingB": {
+    "b1Cost": 2020000000000000,
+    "b2Cost": 2020000000000000000,
+    "b3Cost": "20200000000000000000",
+    "b4Refund": 990000000000000000,
+    "b5Refund": "20791980000000000000"
+  }
+}
