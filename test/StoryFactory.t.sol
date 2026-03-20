@@ -44,6 +44,10 @@ contract MockBond is IMCV2_Bond {
     }
 
     function claimRoyalties(address) external {}
+
+    function creationFee() external pure returns (uint256) {
+        return 0;
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -45,6 +45,7 @@ contract E2ETest is Script {
     uint256 priceAfterB2;
     uint256 priceAfterB3;
 
+    uint256 creationFee;
     uint256 totalGas;
     uint256 scenariosPassed;
 
@@ -57,11 +58,15 @@ contract E2ETest is Script {
         donorKey = vm.envUint("DONOR_PRIVATE_KEY");
         donor = vm.addr(donorKey);
 
+        // Read MCV2_Bond creation fee (required for createStoryline)
+        creationFee = BOND.creationFee();
+
         console.log("=== E2E Test Suite - Base Mainnet ===");
         console.log("Deployer:", deployer);
         console.log("Donor:", donor);
         console.log("PL_TEST balance (deployer):", PL_TEST.balanceOf(deployer));
         console.log("PL_TEST balance (donor):", PL_TEST.balanceOf(donor));
+        console.log("MCV2_Bond creationFee:", creationFee);
         console.log("");
 
         // Initialize JSON results
@@ -140,7 +145,7 @@ contract E2ETest is Script {
         console.log("--- Group A: Story Lifecycle ---");
 
         // A1: Create storyline WITH deadline, chain 3 plots
-        idA1 = FACTORY.createStoryline("E2E Story Alpha", CID_46, HASH_A, true);
+        idA1 = FACTORY.createStoryline{value: creationFee}("E2E Story Alpha", CID_46, HASH_A, true);
         (address w1, address t1, uint256 pc1,, bool hd1,) = FACTORY.storylines(idA1);
         require(w1 == deployer, "A1: writer mismatch");
         require(t1 != address(0), "A1: token is zero");
@@ -167,7 +172,7 @@ contract E2ETest is Script {
         vm.serializeString(resultsJson, "storylineA1", a1Json);
 
         // A2: Create storyline WITHOUT deadline, chain 1 plot
-        idA2 = FACTORY.createStoryline("E2E Story Beta", CID_46, HASH_A, false);
+        idA2 = FACTORY.createStoryline{value: creationFee}("E2E Story Beta", CID_46, HASH_A, false);
         (address w2, address t2, uint256 pc2,, bool hd2,) = FACTORY.storylines(idA2);
         require(w2 == deployer, "A2: writer mismatch");
         require(t2 != address(0), "A2: token is zero");
@@ -189,7 +194,7 @@ contract E2ETest is Script {
         vm.serializeString(resultsJson, "storylineA2", a2Json);
 
         // A3: Same wallet creates 2nd storyline (3rd total)
-        idA3 = FACTORY.createStoryline("E2E Story Gamma", CID_46, HASH_A, false);
+        idA3 = FACTORY.createStoryline{value: creationFee}("E2E Story Gamma", CID_46, HASH_A, false);
         (address w3, address t3,,,,) = FACTORY.storylines(idA3);
         require(w3 == deployer, "A3: writer mismatch");
         require(t3 != address(0), "A3: token is zero");
@@ -504,26 +509,28 @@ contract E2ETest is Script {
         console.log("--- Group F: Edge Cases ---");
 
         // F1: CID at exact min length (46 chars)
-        uint256 idF1 = FACTORY.createStoryline("Edge Min CID", CID_46, HASH_A, false);
+        uint256 idF1 = FACTORY.createStoryline{value: creationFee}("Edge Min CID", CID_46, HASH_A, false);
         require(idF1 > 0, "F1: failed to create");
         console.log("[F1] CID exact min (46 chars)          PASS  storylineId=%d", idF1);
         scenariosPassed++;
 
         // F2: CID at exact max length (100 chars)
-        uint256 idF2 = FACTORY.createStoryline("Edge Max CID", CID_100, HASH_A, false);
+        uint256 idF2 = FACTORY.createStoryline{value: creationFee}("Edge Max CID", CID_100, HASH_A, false);
         require(idF2 > 0, "F2: failed to create");
         console.log("[F2] CID exact max (100 chars)         PASS  storylineId=%d", idF2);
         scenariosPassed++;
 
-        // F3: createStoryline with msg.value = 0 (MCV2_Bond creation fee behavior)
-        uint256 idF3 = FACTORY.createStoryline("Zero Fee Story", CID_46, HASH_A, false);
-        require(idF3 > 0, "F3: failed to create with zero value");
-        console.log("[F3] Create with msg.value=0           PASS  storylineId=%d", idF3);
-        scenariosPassed++;
+        // F3: createStoryline with msg.value = 0 should revert (creation fee required)
+        try FACTORY.createStoryline("Zero Fee Story", CID_46, HASH_A, false) {
+            revert("F3: should have reverted without creation fee");
+        } catch {
+            console.log("[F3] Zero fee reverts                  PASS  (MCV2_Bond__InvalidCreationFee)");
+            scenariosPassed++;
+        }
 
-        // F4: chainPlot with empty title (title not validated in chainPlot)
-        FACTORY.chainPlot(idF3, "", CID_46, HASH_B);
-        (,, uint256 pc,,,) = FACTORY.storylines(idF3);
+        // F4: chainPlot with empty title (title not validated in chainPlot) — use F1's storyline
+        FACTORY.chainPlot(idF1, "", CID_46, HASH_B);
+        (,, uint256 pc,,,) = FACTORY.storylines(idF1);
         require(pc == 2, "F4: plotCount should be 2");
         console.log("[F4] chainPlot with empty title        PASS  plotCount=%d", pc);
         scenariosPassed++;
@@ -552,8 +559,7 @@ contract E2ETest is Script {
         string memory fKey = "edgeCasesF";
         vm.serializeUint(fKey, "f1StorylineId", idF1);
         vm.serializeAddress(fKey, "f1Token", tokenF1);
-        vm.serializeUint(fKey, "f2StorylineId", idF2);
-        string memory fJson = vm.serializeUint(fKey, "f3StorylineId", idF3);
+        string memory fJson = vm.serializeUint(fKey, "f2StorylineId", idF2);
         vm.serializeString(resultsJson, "edgeCasesF", fJson);
     }
 }

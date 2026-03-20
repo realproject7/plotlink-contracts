@@ -50,4 +50,7 @@ interface IMCV2_Bond {
 
     /// @notice Claim accumulated royalties (inherited from MCV2_Royalty)
     function claimRoyalties(address reserveToken) external;
+
+    /// @notice Required ETH fee for createToken
+    function creationFee() external view returns (uint256);
 }
