@@ -11,7 +11,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 ///         under --broadcast. Run with `forge script` (no --broadcast flag).
 ///         Requires the main E2ETest to have run first (needs existing storylines).
 contract E2ETestReverts is Script {
-    StoryFactory constant FACTORY = StoryFactory(0xc278F4099298118efA8dF30DF0F4876632571948);
+    StoryFactory constant FACTORY = StoryFactory(0x27B4FCf333f29a3865b3B76ea00C955D7b64BD0F);
     IERC20 constant PL_TEST = IERC20(0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1);
     IMCV2_Bond constant BOND = IMCV2_Bond(0xc5a076cad94176c2996B32d8466Be1cE757FAa27);
 
@@ -145,6 +145,44 @@ contract E2ETestReverts is Script {
             scenariosPassed++;
         }
 
+        // E10: chainPlot with empty title (new validation from #42)
+        vm.prank(deployer);
+        try FACTORY.chainPlot(idA1, "", CID_46, HASH_A) {
+            revert("E10: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Empty title"), "E10: wrong revert reason");
+            console.log('[E10] Empty title in chainPlot reverts PASS  "Empty title"');
+            scenariosPassed++;
+        }
+
+        // E11: createStoryline with zero hash
+        try FACTORY.createStoryline("Test", CID_46, bytes32(0), false) {
+            revert("E11: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Empty hash"), "E11: wrong revert reason");
+            console.log('[E11] Zero hash in create reverts      PASS  "Empty hash"');
+            scenariosPassed++;
+        }
+
+        // E12: chainPlot with zero hash
+        vm.prank(deployer);
+        try FACTORY.chainPlot(idA1, "Test", CID_46, bytes32(0)) {
+            revert("E12: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Empty hash"), "E12: wrong revert reason");
+            console.log('[E12] Zero hash in chainPlot reverts   PASS  "Empty hash"');
+            scenariosPassed++;
+        }
+
+        // E13: updateCurve by non-owner
+        try FACTORY.updateCurve(new uint128[](1), new uint128[](1)) {
+            revert("E13: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Not owner"), "E13: wrong revert reason");
+            console.log('[E13] Non-owner updateCurve reverts    PASS  "Not owner"');
+            scenariosPassed++;
+        }
+
         // ===== F3: Zero creation fee =====
         console.log("");
         console.log("--- Group F: Edge Cases (reverts) ---");
@@ -155,6 +193,16 @@ contract E2ETestReverts is Script {
             console.log("[F3] Zero fee reverts                  PASS  (MCV2_Bond__InvalidCreationFee)");
             scenariosPassed++;
         }
+
+        // ===== Group G: hasSunset view =====
+        console.log("");
+        console.log("--- Group G: hasSunset ---");
+
+        // G1: hasSunset on active storyline (no deadline) — should be false
+        bool sunset1 = FACTORY.hasSunset(idA1);
+        require(!sunset1, "G1: hasSunset should be false for no-deadline storyline");
+        console.log("[G1] hasSunset (no deadline) = false   PASS");
+        scenariosPassed++;
 
         console.log("");
         console.log("=== ALL REVERT TESTS PASSED ===");
