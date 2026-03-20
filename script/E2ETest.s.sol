@@ -476,7 +476,8 @@ contract E2ETest is Script {
             scenariosPassed++;
         }
 
-        // E8: chainPlot with CID < 46 chars
+        // E8: chainPlot with CID < 46 chars (prank as deployer to pass writer check)
+        vm.prank(deployer);
         try FACTORY.chainPlot(idA1, "Test", "QmShortCID1234567890123456789012345678901234", HASH_A) {
             revert("E8: should have reverted");
         } catch Error(string memory reason) {
@@ -485,7 +486,8 @@ contract E2ETest is Script {
             scenariosPassed++;
         }
 
-        // E9: chainPlot with CID > 100 chars
+        // E9: chainPlot with CID > 100 chars (prank as deployer to pass writer check)
+        vm.prank(deployer);
         try FACTORY.chainPlot(
             idA1,
             "Test",
