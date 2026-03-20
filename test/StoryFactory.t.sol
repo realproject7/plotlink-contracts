@@ -123,14 +123,12 @@ contract StoryFactoryTest is Test {
         assertEq(id, 1);
         assertEq(factory.storylineCount(), 1);
 
-        (address w, address tok, uint256 plotCount, uint256 lastPlot, bool deadline, bool sunset) =
-            factory.storylines(1);
+        (address w, address tok, uint24 plotCount, uint40 lastPlot, bool deadline) = factory.storylines(1);
         assertEq(w, writer);
         assertTrue(tok != address(0));
         assertEq(plotCount, 1);
-        assertEq(lastPlot, block.timestamp);
+        assertEq(lastPlot, uint40(block.timestamp));
         assertFalse(deadline);
-        assertFalse(sunset);
 
         // Bond was called
         assertEq(bond.createCount(), 1);
@@ -201,7 +199,7 @@ contract StoryFactoryTest is Test {
         vm.prank(writer);
         factory.chainPlot(id, "Chapter 2", cid2, hash2);
 
-        (,, uint256 plotCount,,,) = factory.storylines(id);
+        (,, uint24 plotCount,,) = factory.storylines(id);
         assertEq(plotCount, 2);
     }
 
@@ -263,31 +261,57 @@ contract StoryFactoryTest is Test {
         vm.prank(writer);
         factory.chainPlot(id, "Late Chapter", VALID_CID, FAKE_HASH);
 
-        (,, uint256 plotCount,,,) = factory.storylines(id);
+        (,, uint24 plotCount,,) = factory.storylines(id);
         assertEq(plotCount, 2);
     }
 
-    function test_chainPlot_revert_sunset() public {
+    // ===================================================================
+    // hasSunset
+    // ===================================================================
+
+    function test_hasSunset_false_noDeadline() public {
         vm.prank(writer);
         uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, false);
 
-        // Storyline struct is at mapping slot: keccak256(abi.encode(id, 2))
-        // where 2 is the storage slot of `storylines` mapping.
-        // Struct layout: writer(slot+0), token(slot+1), plotCount(slot+2),
-        //   lastPlotTime(slot+3), hasDeadline+sunset packed in slot+4
-        // hasDeadline is at byte 0, sunset is at byte 1
-        bytes32 baseSlot = keccak256(abi.encode(id, uint256(2)));
-        bytes32 flagsSlot = bytes32(uint256(baseSlot) + 4);
+        vm.warp(block.timestamp + 365 days);
+        assertFalse(factory.hasSunset(id));
+    }
 
-        // Read current value and set sunset bit (byte 1 = offset 1 from right)
-        bytes32 current = vm.load(address(factory), flagsSlot);
-        // sunset is the second bool in the packed slot — set byte at offset 1
-        bytes32 withSunset = current | bytes32(uint256(1) << 8);
-        vm.store(address(factory), flagsSlot, withSunset);
-
+    function test_hasSunset_false_withinDeadline() public {
         vm.prank(writer);
-        vm.expectRevert("Storyline sunset");
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, true);
+
+        vm.warp(block.timestamp + 167 hours);
+        assertFalse(factory.hasSunset(id));
+    }
+
+    function test_hasSunset_true_deadlineExpired() public {
+        vm.prank(writer);
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, true);
+
+        vm.warp(block.timestamp + 168 hours + 1);
+        assertTrue(factory.hasSunset(id));
+    }
+
+    function test_hasSunset_resets_afterChainPlot() public {
+        vm.prank(writer);
+        uint256 id = factory.createStoryline("Story", VALID_CID, FAKE_HASH, true);
+
+        // Almost expired
+        vm.warp(block.timestamp + 167 hours);
+        assertFalse(factory.hasSunset(id));
+
+        // Chain a plot — resets the deadline
+        vm.prank(writer);
         factory.chainPlot(id, "Chapter 2", VALID_CID, FAKE_HASH);
+
+        // 167 hours after the new plot — still within deadline
+        vm.warp(block.timestamp + 167 hours);
+        assertFalse(factory.hasSunset(id));
+
+        // 169 hours after the new plot — expired
+        vm.warp(block.timestamp + 2 hours);
+        assertTrue(factory.hasSunset(id));
     }
 
     // ===================================================================
@@ -338,5 +362,14 @@ contract StoryFactoryTest is Test {
         vm.prank(other);
         vm.expectRevert("Insufficient allowance");
         factory.donate(id, 100e18);
+    }
+
+    // ===================================================================
+    // Royalty constants
+    // ===================================================================
+
+    function test_royaltyConstants() public view {
+        assertEq(factory.MINT_ROYALTY(), 100); // 1%
+        assertEq(factory.BURN_ROYALTY(), 100); // 1%
     }
 }
