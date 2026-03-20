@@ -204,23 +204,12 @@ contract E2ETestReverts is Script {
         console.log("[G1] hasSunset (no deadline) = false   PASS");
         scenariosPassed++;
 
-        // G2: hasSunset on expired deadline storyline
-        // Read storylineA2 which has hasDeadline from e2e-results.json
-        uint256 idA2 = vm.parseJsonUint(json, ".storylineA2.storylineId");
-        bool a2HasDeadline = vm.parseJsonBool(json, ".storylineA2.hasDeadline");
-        if (!a2HasDeadline) {
-            // A2 has no deadline — hasSunset should be false even after warp
-            vm.warp(block.timestamp + 365 days);
-            bool sunset2 = FACTORY.hasSunset(idA2);
-            require(!sunset2, "G2: hasSunset should be false without deadline even after warp");
-            console.log("[G2] hasSunset (no deadline, warped)    PASS");
-        } else {
-            // A2 has deadline — warp past it
-            vm.warp(block.timestamp + 169 hours);
-            bool sunset2 = FACTORY.hasSunset(idA2);
-            require(sunset2, "G2: hasSunset should be true after deadline");
-            console.log("[G2] hasSunset (expired deadline)       PASS");
-        }
+        // G2: hasSunset on expired deadline storyline (A1 has hasDeadline=true)
+        // Warp past 168h from the last plot time — hasSunset should return true
+        vm.warp(block.timestamp + 169 hours);
+        bool sunset2 = FACTORY.hasSunset(idA1);
+        require(sunset2, "G2: hasSunset should be true after deadline expired");
+        console.log("[G2] hasSunset (expired deadline)       PASS");
         scenariosPassed++;
 
         // ===== Group H: Constructor validations (simulation only) =====

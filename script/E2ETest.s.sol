@@ -444,13 +444,7 @@ contract E2ETest is Script {
         FACTORY.updateCurve(newRanges, newPrices);
         console.log("[F6] updateCurve by owner              PASS");
 
-        uint256 idF6 = FACTORY.createStoryline{value: creationFee}("Updated Curve Story", CID_46, HASH_A, false);
-        require(idF6 > 0, "F6: failed to create with new curve");
-        console.log("[F6] Create after updateCurve           PASS  storylineId=%d", idF6);
-        scenariosPassed += 2;
-
-        // Restore original curve (500 steps) to leave contract in clean state
-        // Not practical in broadcast — skip restore. The curve is now 2-step.
+        uint256 idF6 = _verifyF6();
 
         // Serialize edge case storyline IDs
         string memory fKey = "edgeCasesF";
@@ -459,5 +453,26 @@ contract E2ETest is Script {
         vm.serializeUint(fKey, "f2StorylineId", idF2);
         string memory fJson = vm.serializeUint(fKey, "f6StorylineId", idF6);
         vm.serializeString(resultsJson, "edgeCasesF", fJson);
+    }
+
+    function _verifyF6() internal returns (uint256 idF6) {
+        idF6 = FACTORY.createStoryline{value: creationFee}("Updated Curve Story", CID_46, HASH_A, false);
+        require(idF6 > 0, "F6: failed to create with new curve");
+
+        // Prove the new curve is used: buy 1 token, cost should reflect new price (2e15)
+        (, address tokenF6,,,) = FACTORY.storylines(idF6);
+        IERC20Extended storyTokenF6 = IERC20Extended(tokenF6);
+        storyTokenF6.approve(address(BOND), type(uint256).max);
+        uint256 balBefore = PL_TEST.balanceOf(deployer);
+        BOND.mint(tokenF6, 1e18, type(uint256).max, deployer);
+        uint256 f6Cost = balBefore - PL_TEST.balanceOf(deployer);
+        // New curve first step is 2e15 + 1% royalty. Original was 1e15 + 1%.
+        // So cost should be > 1.5e15 (proving new curve was applied)
+        require(f6Cost > 1.5e15, "F6: cost too low, new curve not applied");
+        console.log("[F6] Create+buy after updateCurve      PASS  cost=%d (new curve)", f6Cost);
+        scenariosPassed += 2;
+
+        // Sell back to clean up
+        BOND.burn(tokenF6, 1e18, 0, deployer);
     }
 }
