@@ -24,7 +24,7 @@ contract DeployBase is Script {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        StoryFactory factory = new StoryFactory(MCV2_BOND, PL_TEST, MAX_SUPPLY, stepRanges, stepPrices);
+        StoryFactory factory = new StoryFactory(MCV2_BOND, PL_TEST, MAX_SUPPLY, stepRanges, stepPrices, 8);
 
         vm.stopBroadcast();
 

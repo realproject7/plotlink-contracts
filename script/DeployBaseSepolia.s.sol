@@ -24,7 +24,7 @@ contract DeployBaseSepolia is Script {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        StoryFactory factory = new StoryFactory(MCV2_BOND, PLOT_TOKEN, MAX_SUPPLY, stepRanges, stepPrices);
+        StoryFactory factory = new StoryFactory(MCV2_BOND, PLOT_TOKEN, MAX_SUPPLY, stepRanges, stepPrices, 0);
 
         vm.stopBroadcast();
 

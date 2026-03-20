@@ -88,7 +88,8 @@ contract StoryFactory {
         address _plotToken,
         uint128 _maxSupply,
         uint128[] memory _stepRanges,
-        uint128[] memory _stepPrices
+        uint128[] memory _stepPrices,
+        uint256 _initialStorylineCount
     ) {
         require(_bond != address(0), "Zero bond address");
         require(_plotToken != address(0), "Zero token address");
@@ -102,6 +103,7 @@ contract StoryFactory {
         owner = msg.sender;
         stepRanges = _stepRanges;
         stepPrices = _stepPrices;
+        storylineCount = _initialStorylineCount;
     }
 
     // -----------------------------------------------------------------------
