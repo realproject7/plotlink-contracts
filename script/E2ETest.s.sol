@@ -18,7 +18,7 @@ contract E2ETest is Script {
     // -----------------------------------------------------------------------
     // Base mainnet addresses
     // -----------------------------------------------------------------------
-    StoryFactory constant FACTORY = StoryFactory(0x27B4FCf333f29a3865b3B76ea00C955D7b64BD0F);
+    StoryFactory constant FACTORY = StoryFactory(0x337c5b96f03fB335b433291695A4171fd5dED8B0);
     IERC20 constant PL_TEST = IERC20(0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1);
     IMCV2_Bond constant BOND = IMCV2_Bond(0xc5a076cad94176c2996B32d8466Be1cE757FAa27);
 
