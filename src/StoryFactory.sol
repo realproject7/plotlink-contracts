@@ -119,14 +119,22 @@ contract StoryFactory {
         payable
         returns (uint256 storylineId)
     {
+        // CHECKS
         require(bytes(title).length > 0, "Empty title");
         require(bytes(openingCID).length >= 46 && bytes(openingCID).length <= 100, "Invalid CID");
         require(openingHash != bytes32(0), "Empty hash");
 
+        // EFFECTS (state changes before external calls)
         storylineId = ++storylineCount;
+        storylines[storylineId] = Storyline({
+            writer: msg.sender,
+            token: address(0), // placeholder, updated after interaction
+            plotCount: 1,
+            lastPlotTime: uint40(block.timestamp),
+            hasDeadline: hasDeadline
+        });
 
-        // 1. Create token on Mint Club V2 bonding curve
-        //    Factory becomes initial creator; we transfer to writer below
+        // INTERACTIONS (external calls last)
         TokenParams memory tp =
             TokenParams({name: title, symbol: string(abi.encodePacked("PL-", _uint2str(storylineId)))});
 
@@ -141,23 +149,15 @@ contract StoryFactory {
 
         address tokenAddress = BOND.createToken{value: msg.value}(tp, bp);
 
-        // 2. Transfer creator role to writer (royalties go directly to them)
         // Trust assumption: MCV2_Bond is Mint Club's audited contract.
         // updateBondCreator is expected to succeed if createToken succeeded.
         // No return value to check — if this silently fails, royalties
         // would accrue to the factory with no recovery path.
         BOND.updateBondCreator(tokenAddress, msg.sender);
 
-        // 3. Store storyline
-        storylines[storylineId] = Storyline({
-            writer: msg.sender,
-            token: tokenAddress,
-            plotCount: 1,
-            lastPlotTime: uint40(block.timestamp),
-            hasDeadline: hasDeadline
-        });
+        // Update token address after interaction
+        storylines[storylineId].token = tokenAddress;
 
-        // 4. Emit events
         emit StorylineCreated(storylineId, msg.sender, tokenAddress, title, hasDeadline, openingCID, openingHash);
         emit PlotChained(storylineId, 0, msg.sender, title, openingCID, openingHash);
     }
