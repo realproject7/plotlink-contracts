@@ -222,7 +222,7 @@ contract E2ETestReverts is Script {
         p1[0] = 1e15;
 
         // H1: Zero bond address
-        try new StoryFactory(address(0), address(1), 1e18, r1, p1) {
+        try new StoryFactory(address(0), address(1), 1e18, r1, p1, 0) {
             revert("H1: should have reverted");
         } catch Error(string memory reason) {
             require(keccak256(bytes(reason)) == keccak256("Zero bond address"), "H1: wrong revert reason");
@@ -231,7 +231,7 @@ contract E2ETestReverts is Script {
         }
 
         // H2: Zero token address
-        try new StoryFactory(address(1), address(0), 1e18, r1, p1) {
+        try new StoryFactory(address(1), address(0), 1e18, r1, p1, 0) {
             revert("H2: should have reverted");
         } catch Error(string memory reason) {
             require(keccak256(bytes(reason)) == keccak256("Zero token address"), "H2: wrong revert reason");
@@ -246,7 +246,7 @@ contract E2ETestReverts is Script {
             bigR[i] = uint128(i + 1);
             bigP[i] = uint128(i + 1);
         }
-        try new StoryFactory(address(1), address(1), 1e18, bigR, bigP) {
+        try new StoryFactory(address(1), address(1), 1e18, bigR, bigP, 0) {
             revert("H3: should have reverted");
         } catch Error(string memory reason) {
             require(keccak256(bytes(reason)) == keccak256("Too many steps"), "H3: wrong revert reason");

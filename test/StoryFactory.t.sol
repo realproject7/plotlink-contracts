@@ -109,7 +109,7 @@ contract StoryFactoryTest is Test {
         prices[0] = 1e15;
         prices[1] = 1e18;
 
-        factory = new StoryFactory(address(bond), address(plot), 1_000_000e18, ranges, prices);
+        factory = new StoryFactory(address(bond), address(plot), 1_000_000e18, ranges, prices, 0);
     }
 
     // ===================================================================
@@ -408,7 +408,7 @@ contract StoryFactoryTest is Test {
         prices[0] = 1e15;
 
         vm.expectRevert("Zero bond address");
-        new StoryFactory(address(0), address(plot), 1e18, ranges, prices);
+        new StoryFactory(address(0), address(plot), 1e18, ranges, prices, 0);
     }
 
     function test_constructor_revert_zeroToken() public {
@@ -418,7 +418,7 @@ contract StoryFactoryTest is Test {
         prices[0] = 1e15;
 
         vm.expectRevert("Zero token address");
-        new StoryFactory(address(bond), address(0), 1e18, ranges, prices);
+        new StoryFactory(address(bond), address(0), 1e18, ranges, prices, 0);
     }
 
     function test_constructor_revert_tooManySteps() public {
@@ -430,7 +430,7 @@ contract StoryFactoryTest is Test {
         }
 
         vm.expectRevert("Too many steps");
-        new StoryFactory(address(bond), address(plot), 1e18, ranges, prices);
+        new StoryFactory(address(bond), address(plot), 1e18, ranges, prices, 0);
     }
 
     // ===================================================================
