@@ -36,6 +36,7 @@ contract E2ETestReverts is Script {
         // ===== Group D2: Empty royalty claim =====
         console.log("--- Group D: Royalties (reverts) ---");
 
+        vm.prank(deployer);
         try BOND.claimRoyalties(address(PL_TEST)) {
             revert("D2: should have reverted on empty claim");
         } catch {
