@@ -6,9 +6,14 @@ import {StoryFactory} from "../src/StoryFactory.sol";
 import {IMCV2_Bond} from "../src/interfaces/IMCV2_Bond.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 
-/// @title E2ETest — Full StoryFactory lifecycle on Base mainnet
-/// @notice Groups A–F: story lifecycle, trading, donations, royalties,
-///         validation barriers, and edge cases. Outputs results to console.
+/// @dev Extended ERC-20 interface for totalSupply checks
+interface IERC20Extended is IERC20 {
+    function totalSupply() external view returns (uint256);
+}
+
+/// @title E2ETest - Full StoryFactory lifecycle on Base mainnet
+/// @notice Groups A-F: story lifecycle, trading, donations, royalties,
+///         validation barriers, and edge cases. Outputs results to e2e-results.json.
 contract E2ETest is Script {
     // -----------------------------------------------------------------------
     // Base mainnet addresses
@@ -40,6 +45,9 @@ contract E2ETest is Script {
     uint256 totalGas;
     uint256 scenariosPassed;
 
+    // JSON results accumulator
+    string resultsJson;
+
     function run() external {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(deployerKey);
@@ -48,6 +56,13 @@ contract E2ETest is Script {
         console.log("Deployer:", deployer);
         console.log("PL_TEST balance:", PL_TEST.balanceOf(deployer));
         console.log("");
+
+        // Initialize JSON results
+        resultsJson = "{}";
+        vm.serializeAddress(resultsJson, "deployer", deployer);
+        vm.serializeAddress(resultsJson, "factory", address(FACTORY));
+        vm.serializeAddress(resultsJson, "plTest", address(PL_TEST));
+        vm.serializeAddress(resultsJson, "bond", address(BOND));
 
         uint256 gasStart = gasleft();
 
@@ -80,10 +95,17 @@ contract E2ETest is Script {
         vm.stopBroadcast();
 
         totalGas = gasStart - gasleft();
+
+        // Write final JSON results
+        vm.serializeUint(resultsJson, "scenariosPassed", scenariosPassed);
+        string memory finalJson = vm.serializeUint(resultsJson, "gasUsed", totalGas);
+        vm.writeJson(finalJson, "e2e-results.json");
+
         console.log("");
         console.log("=== ALL SCENARIOS PASSED ===");
         console.log("Scenarios passed:", scenariosPassed);
         console.log("Approximate gas used:", totalGas);
+        console.log("Results written to e2e-results.json");
     }
 
     // ===================================================================
@@ -112,6 +134,14 @@ contract E2ETest is Script {
         console.log("[A1] Chain plots 1/3, 2/3, 3/3         PASS  plotCount=%d", pc1b);
         scenariosPassed += 2; // A1 create + A1 chain
 
+        // Serialize A1 results
+        string memory a1Key = "storylineA1";
+        vm.serializeUint(a1Key, "storylineId", idA1);
+        vm.serializeAddress(a1Key, "token", t1);
+        vm.serializeUint(a1Key, "plotCount", pc1b);
+        string memory a1Json = vm.serializeBool(a1Key, "hasDeadline", true);
+        vm.serializeString(resultsJson, "storylineA1", a1Json);
+
         // A2: Create storyline WITHOUT deadline, chain 1 plot
         idA2 = FACTORY.createStoryline("E2E Story Beta", CID_46, HASH_A, false);
         (address w2, address t2, uint256 pc2,, bool hd2,) = FACTORY.storylines(idA2);
@@ -126,6 +156,14 @@ contract E2ETest is Script {
         console.log("[A2] Create storyline no deadline       PASS  storylineId=%d  plotCount=%d", idA2, pc2b);
         scenariosPassed++;
 
+        // Serialize A2 results
+        string memory a2Key = "storylineA2";
+        vm.serializeUint(a2Key, "storylineId", idA2);
+        vm.serializeAddress(a2Key, "token", t2);
+        vm.serializeUint(a2Key, "plotCount", pc2b);
+        string memory a2Json = vm.serializeBool(a2Key, "hasDeadline", false);
+        vm.serializeString(resultsJson, "storylineA2", a2Json);
+
         // A3: Same wallet creates 2nd storyline (3rd total)
         idA3 = FACTORY.createStoryline("E2E Story Gamma", CID_46, HASH_A, false);
         (address w3, address t3,,,,) = FACTORY.storylines(idA3);
@@ -135,6 +173,12 @@ contract E2ETest is Script {
         require(idA3 != idA1 && idA3 != idA2, "A3: IDs not unique");
         console.log("[A3] Multiple storylines per writer     PASS  storylineId=%d  token=%s", idA3, t3);
         scenariosPassed++;
+
+        // Serialize A3 results
+        string memory a3Key = "storylineA3";
+        vm.serializeUint(a3Key, "storylineId", idA3);
+        string memory a3Json = vm.serializeAddress(a3Key, "token", t3);
+        vm.serializeString(resultsJson, "storylineA3", a3Json);
     }
 
     // ===================================================================
@@ -145,36 +189,44 @@ contract E2ETest is Script {
         console.log("");
         console.log("--- Group B: Trading ---");
 
-        // Approve storyline token for Bond (needed for sells)
-        IERC20 storyToken = IERC20(tokenA1);
+        IERC20Extended storyToken = IERC20Extended(tokenA1);
         storyToken.approve(address(BOND), type(uint256).max);
 
         // B1: Buy 1 token
+        uint256 supplyBefore = storyToken.totalSupply();
         uint256 balBefore = PL_TEST.balanceOf(deployer);
         (uint256 estReserve1,) = BOND.getReserveForToken(tokenA1, 1e18);
         BOND.mint(tokenA1, 1e18, type(uint256).max, deployer);
         uint256 spent1 = balBefore - PL_TEST.balanceOf(deployer);
         require(storyToken.balanceOf(deployer) == 1e18, "B1: balance mismatch");
+        require(storyToken.totalSupply() == supplyBefore + 1e18, "B1: totalSupply mismatch");
+        require(spent1 <= estReserve1 + 1 && spent1 + 1 >= estReserve1, "B1: estimate mismatch");
         priceAfterB1 = spent1;
         console.log("[B1] Buy 1 token                       PASS  cost=%d  estimate=%d", spent1, estReserve1);
         scenariosPassed++;
 
         // B2: Buy 1,000 tokens
+        supplyBefore = storyToken.totalSupply();
         balBefore = PL_TEST.balanceOf(deployer);
         (uint256 estReserve2,) = BOND.getReserveForToken(tokenA1, 1_000e18);
         BOND.mint(tokenA1, 1_000e18, type(uint256).max, deployer);
         uint256 spent2 = balBefore - PL_TEST.balanceOf(deployer);
         require(storyToken.balanceOf(deployer) == 1_001e18, "B2: balance mismatch");
+        require(storyToken.totalSupply() == supplyBefore + 1_000e18, "B2: totalSupply mismatch");
+        require(spent2 <= estReserve2 + 1 && spent2 + 1 >= estReserve2, "B2: estimate mismatch");
         priceAfterB2 = spent2;
         console.log("[B2] Buy 1,000 tokens                  PASS  cost=%d  estimate=%d", spent2, estReserve2);
         scenariosPassed++;
 
         // B3: Buy 10,000 tokens
+        supplyBefore = storyToken.totalSupply();
         balBefore = PL_TEST.balanceOf(deployer);
         (uint256 estReserve3,) = BOND.getReserveForToken(tokenA1, 10_000e18);
         BOND.mint(tokenA1, 10_000e18, type(uint256).max, deployer);
         uint256 spent3 = balBefore - PL_TEST.balanceOf(deployer);
         require(storyToken.balanceOf(deployer) == 11_001e18, "B3: balance mismatch");
+        require(storyToken.totalSupply() == supplyBefore + 10_000e18, "B3: totalSupply mismatch");
+        require(spent3 <= estReserve3 + 1 && spent3 + 1 >= estReserve3, "B3: estimate mismatch");
         priceAfterB3 = spent3;
         console.log("[B3] Buy 10,000 tokens                 PASS  cost=%d  estimate=%d", spent3, estReserve3);
         scenariosPassed++;
@@ -185,24 +237,39 @@ contract E2ETest is Script {
         console.log("[B6] Price monotonicity                PASS  %d < %d < %d", priceAfterB1, priceAfterB2, priceAfterB3);
         scenariosPassed++;
 
-        // B4: Partial sell — burn 500 tokens
+        // B4: Partial sell - burn 500 tokens
+        supplyBefore = storyToken.totalSupply();
         balBefore = PL_TEST.balanceOf(deployer);
         (uint256 estRefund4,) = BOND.getRefundForTokens(tokenA1, 500e18);
         BOND.burn(tokenA1, 500e18, 0, deployer);
         uint256 refund4 = PL_TEST.balanceOf(deployer) - balBefore;
         require(storyToken.balanceOf(deployer) == 10_501e18, "B4: balance mismatch");
+        require(storyToken.totalSupply() == supplyBefore - 500e18, "B4: totalSupply mismatch");
+        require(refund4 <= estRefund4 + 1 && refund4 + 1 >= estRefund4, "B4: estimate mismatch");
         console.log("[B4] Partial sell 500 tokens           PASS  refund=%d  estimate=%d", refund4, estRefund4);
         scenariosPassed++;
 
-        // B5: Full sell — burn all remaining tokens
+        // B5: Full sell - burn all remaining tokens
         uint256 remaining = storyToken.balanceOf(deployer);
+        supplyBefore = storyToken.totalSupply();
         balBefore = PL_TEST.balanceOf(deployer);
         (uint256 estRefund5,) = BOND.getRefundForTokens(tokenA1, remaining);
         BOND.burn(tokenA1, remaining, 0, deployer);
         uint256 refund5 = PL_TEST.balanceOf(deployer) - balBefore;
         require(storyToken.balanceOf(deployer) == 0, "B5: balance should be 0");
+        require(storyToken.totalSupply() == supplyBefore - remaining, "B5: totalSupply mismatch");
+        require(refund5 <= estRefund5 + 1 && refund5 + 1 >= estRefund5, "B5: estimate mismatch");
         console.log("[B5] Full sell all tokens              PASS  refund=%d  estimate=%d", refund5, estRefund5);
         scenariosPassed++;
+
+        // Serialize trading results
+        string memory bKey = "tradingB";
+        vm.serializeUint(bKey, "b1Cost", spent1);
+        vm.serializeUint(bKey, "b2Cost", spent2);
+        vm.serializeUint(bKey, "b3Cost", spent3);
+        vm.serializeUint(bKey, "b4Refund", refund4);
+        string memory bJson = vm.serializeUint(bKey, "b5Refund", refund5);
+        vm.serializeString(resultsJson, "tradingB", bJson);
     }
 
     // ===================================================================
@@ -218,7 +285,6 @@ contract E2ETest is Script {
         FACTORY.donate(idA1, 0.001 ether);
         uint256 balAfter = PL_TEST.balanceOf(deployer);
         // Since deployer is the writer, balance change is net zero (self-donation)
-        // The donation goes to the writer, who IS the deployer in this test
         console.log("[C1] Donate 0.001 PL_TEST (small)      PASS  balDelta=%d", balAfter - balBefore);
         scenariosPassed++;
 
@@ -252,7 +318,7 @@ contract E2ETest is Script {
         console.log("");
         console.log("--- Group D: Royalties ---");
 
-        // D1: Claim royalties after B1–B5 trading
+        // D1: Claim royalties after B1-B5 trading
         uint256 balBefore = PL_TEST.balanceOf(deployer);
         BOND.claimRoyalties(address(PL_TEST));
         uint256 royaltyClaimed = PL_TEST.balanceOf(deployer) - balBefore;
@@ -260,7 +326,10 @@ contract E2ETest is Script {
         console.log("[D1] Claim royalties after trading     PASS  amount=%d", royaltyClaimed);
         scenariosPassed++;
 
-        // D2: Claim again — should return 0
+        // Serialize royalty results
+        vm.serializeUint(resultsJson, "royaltiesClaimed", royaltyClaimed);
+
+        // D2: Claim again - should return 0
         balBefore = PL_TEST.balanceOf(deployer);
         BOND.claimRoyalties(address(PL_TEST));
         uint256 royaltyClaimed2 = PL_TEST.balanceOf(deployer) - balBefore;
@@ -309,9 +378,8 @@ contract E2ETest is Script {
             scenariosPassed++;
         }
 
-        // E4: chainPlot from non-writer address — we use address(0x1234) via prank
-        // Note: In a broadcast script we can't prank, so we test this by calling
-        // from the script contract itself (which is not the writer)
+        // E4: chainPlot from non-writer address
+        // Outside broadcast, msg.sender is the script contract (not the deployer/writer)
         try FACTORY.chainPlot(idA1, "Unauthorized", CID_46, HASH_A) {
             revert("E4: should have reverted");
         } catch Error(string memory reason) {
@@ -406,21 +474,32 @@ contract E2ETest is Script {
         console.log("[F4] chainPlot with empty title        PASS  plotCount=%d", pc);
         scenariosPassed++;
 
-        // F5: Buy then sell same amount — refund < cost due to royalties
+        // F5: Buy then sell same amount - refund < cost due to royalties
         (, address tokenF1,,,,) = FACTORY.storylines(idF1);
-        IERC20 storyTokenF1 = IERC20(tokenF1);
+        IERC20Extended storyTokenF1 = IERC20Extended(tokenF1);
         storyTokenF1.approve(address(BOND), type(uint256).max);
 
+        uint256 supplyBefore = storyTokenF1.totalSupply();
         uint256 balBefore = PL_TEST.balanceOf(deployer);
         BOND.mint(tokenF1, 100e18, type(uint256).max, deployer);
         uint256 buyCost = balBefore - PL_TEST.balanceOf(deployer);
+        require(storyTokenF1.totalSupply() == supplyBefore + 100e18, "F5: totalSupply mismatch after buy");
 
         balBefore = PL_TEST.balanceOf(deployer);
         BOND.burn(tokenF1, 100e18, 0, deployer);
         uint256 sellRefund = PL_TEST.balanceOf(deployer) - balBefore;
+        require(storyTokenF1.totalSupply() == supplyBefore, "F5: totalSupply mismatch after sell");
 
         require(sellRefund < buyCost, "F5: refund should be less than cost due to royalties");
         console.log("[F5] Buy/sell royalty diff              PASS  cost=%d  refund=%d", buyCost, sellRefund);
         scenariosPassed++;
+
+        // Serialize edge case storyline IDs
+        string memory fKey = "edgeCasesF";
+        vm.serializeUint(fKey, "f1StorylineId", idF1);
+        vm.serializeAddress(fKey, "f1Token", tokenF1);
+        vm.serializeUint(fKey, "f2StorylineId", idF2);
+        string memory fJson = vm.serializeUint(fKey, "f3StorylineId", idF3);
+        vm.serializeString(resultsJson, "edgeCasesF", fJson);
     }
 }
