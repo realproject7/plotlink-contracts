@@ -36,6 +36,11 @@ contract E2ETestReverts is Script {
         // ===== Group D2: Empty royalty claim =====
         console.log("--- Group D: Royalties (reverts) ---");
 
+        // Drain any pending royalties first (F5 buy/sell may have generated new ones)
+        vm.prank(deployer);
+        try BOND.claimRoyalties(address(PL_TEST)) {} catch {}
+
+        // Now the second claim should revert with NothingToClaim
         vm.prank(deployer);
         try BOND.claimRoyalties(address(PL_TEST)) {
             revert("D2: should have reverted on empty claim");
