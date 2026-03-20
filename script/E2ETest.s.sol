@@ -391,13 +391,13 @@ contract E2ETest is Script {
         // Serialize royalty results
         vm.serializeUint(resultsJson, "royaltiesClaimed", royaltyClaimed);
 
-        // D2: Claim again - should return 0
-        balBefore = PL_TEST.balanceOf(deployer);
-        BOND.claimRoyalties(address(PL_TEST));
-        uint256 royaltyClaimed2 = PL_TEST.balanceOf(deployer) - balBefore;
-        require(royaltyClaimed2 == 0, "D2: double-claim should return 0");
-        console.log("[D2] Claim royalties again (empty)     PASS  amount=%d", royaltyClaimed2);
-        scenariosPassed++;
+        // D2: Claim again - should revert with MCV2_Royalty__NothingToClaim()
+        try BOND.claimRoyalties(address(PL_TEST)) {
+            revert("D2: should have reverted on empty claim");
+        } catch {
+            console.log("[D2] Empty claim reverts               PASS  (MCV2_Royalty__NothingToClaim)");
+            scenariosPassed++;
+        }
     }
 
     // ===================================================================
