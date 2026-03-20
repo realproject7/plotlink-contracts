@@ -37,6 +37,9 @@ contract E2ETest is Script {
     uint256 idA3;
     address tokenA1;
     address deployer;
+    uint256 deployerKey;
+    address donor;
+    uint256 donorKey;
 
     uint256 priceAfterB1;
     uint256 priceAfterB2;
@@ -49,20 +52,31 @@ contract E2ETest is Script {
     string resultsJson;
 
     function run() external {
-        uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(deployerKey);
+        donorKey = vm.envUint("DONOR_PRIVATE_KEY");
+        donor = vm.addr(donorKey);
 
         console.log("=== E2E Test Suite - Base Mainnet ===");
         console.log("Deployer:", deployer);
-        console.log("PL_TEST balance:", PL_TEST.balanceOf(deployer));
+        console.log("Donor:", donor);
+        console.log("PL_TEST balance (deployer):", PL_TEST.balanceOf(deployer));
+        console.log("PL_TEST balance (donor):", PL_TEST.balanceOf(donor));
         console.log("");
 
         // Initialize JSON results
         resultsJson = "{}";
         vm.serializeAddress(resultsJson, "deployer", deployer);
+        vm.serializeAddress(resultsJson, "donor", donor);
         vm.serializeAddress(resultsJson, "factory", address(FACTORY));
         vm.serializeAddress(resultsJson, "plTest", address(PL_TEST));
         vm.serializeAddress(resultsJson, "bond", address(BOND));
+        vm.serializeUint(resultsJson, "chainId", block.chainid);
+        vm.serializeString(
+            resultsJson,
+            "broadcastArtifact",
+            string.concat("broadcast/E2ETest.s.sol/", vm.toString(block.chainid), "/run-latest.json")
+        );
 
         uint256 gasStart = gasleft();
 
@@ -78,8 +92,18 @@ contract E2ETest is Script {
         // ===== Group B: Trading =====
         _groupB();
 
-        // ===== Group C: Donations =====
+        // ===== Fund donor for Group C =====
+        PL_TEST.transfer(donor, 5 ether);
+
+        vm.stopBroadcast();
+
+        // ===== Group C: Donations (from donor to verify two-party flow) =====
+        vm.startBroadcast(donorKey);
+        PL_TEST.approve(address(FACTORY), type(uint256).max);
         _groupC();
+        vm.stopBroadcast();
+
+        vm.startBroadcast(deployerKey);
 
         // ===== Group D: Royalties =====
         _groupD();
@@ -234,7 +258,9 @@ contract E2ETest is Script {
         // B6: Price monotonicity check (per-unit cost increases with supply)
         require(priceAfterB2 > priceAfterB1, "B6: price B2 should > B1");
         require(priceAfterB3 > priceAfterB2, "B6: price B3 should > B2");
-        console.log("[B6] Price monotonicity                PASS  %d < %d < %d", priceAfterB1, priceAfterB2, priceAfterB3);
+        console.log(
+            "[B6] Price monotonicity                PASS  %d < %d < %d", priceAfterB1, priceAfterB2, priceAfterB3
+        );
         scenariosPassed++;
 
         // B4: Partial sell - burn 500 tokens
@@ -278,35 +304,66 @@ contract E2ETest is Script {
 
     function _groupC() internal {
         console.log("");
-        console.log("--- Group C: Donations ---");
+        console.log("--- Group C: Donations (from donor) ---");
 
-        // C1: Donate 0.001 PL_TEST (small)
-        uint256 balBefore = PL_TEST.balanceOf(deployer);
+        // C1: Donate 0.001 PL_TEST (small) — verify donor decreases, writer increases
+        uint256 donorBefore = PL_TEST.balanceOf(donor);
+        uint256 writerBefore = PL_TEST.balanceOf(deployer);
         FACTORY.donate(idA1, 0.001 ether);
-        uint256 balAfter = PL_TEST.balanceOf(deployer);
-        // Since deployer is the writer, balance change is net zero (self-donation)
-        console.log("[C1] Donate 0.001 PL_TEST (small)      PASS  balDelta=%d", balAfter - balBefore);
+        uint256 donorAfter = PL_TEST.balanceOf(donor);
+        uint256 writerAfter = PL_TEST.balanceOf(deployer);
+        require(donorBefore - donorAfter == 0.001 ether, "C1: donor balance did not decrease correctly");
+        require(writerAfter - writerBefore == 0.001 ether, "C1: writer balance did not increase correctly");
+        console.log(
+            "[C1] Donate 0.001 PL_TEST (small)      PASS  donorDelta=-%d  writerDelta=+%d",
+            donorBefore - donorAfter,
+            writerAfter - writerBefore
+        );
         scenariosPassed++;
 
         // C2: Donate 1 PL_TEST (standard)
-        balBefore = PL_TEST.balanceOf(deployer);
+        donorBefore = PL_TEST.balanceOf(donor);
+        writerBefore = PL_TEST.balanceOf(deployer);
         FACTORY.donate(idA1, 1 ether);
-        balAfter = PL_TEST.balanceOf(deployer);
-        console.log("[C2] Donate 1 PL_TEST (standard)       PASS  balDelta=%d", balAfter - balBefore);
+        donorAfter = PL_TEST.balanceOf(donor);
+        writerAfter = PL_TEST.balanceOf(deployer);
+        require(donorBefore - donorAfter == 1 ether, "C2: donor balance did not decrease correctly");
+        require(writerAfter - writerBefore == 1 ether, "C2: writer balance did not increase correctly");
+        console.log(
+            "[C2] Donate 1 PL_TEST (standard)       PASS  donorDelta=-%d  writerDelta=+%d",
+            donorBefore - donorAfter,
+            writerAfter - writerBefore
+        );
         scenariosPassed++;
 
         // C3: Donate to same storyline again (accumulates)
-        balBefore = PL_TEST.balanceOf(deployer);
+        donorBefore = PL_TEST.balanceOf(donor);
+        writerBefore = PL_TEST.balanceOf(deployer);
         FACTORY.donate(idA1, 0.5 ether);
-        balAfter = PL_TEST.balanceOf(deployer);
-        console.log("[C3] Donate to same storyline again     PASS  balDelta=%d", balAfter - balBefore);
+        donorAfter = PL_TEST.balanceOf(donor);
+        writerAfter = PL_TEST.balanceOf(deployer);
+        require(donorBefore - donorAfter == 0.5 ether, "C3: donor balance did not decrease correctly");
+        require(writerAfter - writerBefore == 0.5 ether, "C3: writer balance did not increase correctly");
+        console.log(
+            "[C3] Donate to same storyline again     PASS  donorDelta=-%d  writerDelta=+%d",
+            donorBefore - donorAfter,
+            writerAfter - writerBefore
+        );
         scenariosPassed++;
 
         // C4: Donate to storyline A2 (different story)
-        balBefore = PL_TEST.balanceOf(deployer);
+        donorBefore = PL_TEST.balanceOf(donor);
+        writerBefore = PL_TEST.balanceOf(deployer);
         FACTORY.donate(idA2, 0.5 ether);
-        balAfter = PL_TEST.balanceOf(deployer);
-        console.log("[C4] Donate to storyline A2            PASS  balDelta=%d", balAfter - balBefore);
+        donorAfter = PL_TEST.balanceOf(donor);
+        writerAfter = PL_TEST.balanceOf(deployer);
+        require(donorBefore - donorAfter == 0.5 ether, "C4: donor balance did not decrease correctly");
+        require(writerAfter - writerBefore == 0.5 ether, "C4: writer balance did not increase correctly");
+        console.log(
+            "[C4] Donate to storyline A2            PASS  donorDelta=-%d  writerDelta=+%d",
+            donorBefore - donorAfter,
+            writerAfter - writerBefore
+        );
         scenariosPassed++;
     }
 
@@ -401,10 +458,7 @@ contract E2ETest is Script {
         try FACTORY.donate(999999, 1) {
             revert("E6: should have reverted");
         } catch Error(string memory reason) {
-            require(
-                keccak256(bytes(reason)) == keccak256("Storyline does not exist"),
-                "E6: wrong revert reason"
-            );
+            require(keccak256(bytes(reason)) == keccak256("Storyline does not exist"), "E6: wrong revert reason");
             console.log('[E6] Non-existent storyline reverts   PASS  "Storyline does not exist"');
             scenariosPassed++;
         }
