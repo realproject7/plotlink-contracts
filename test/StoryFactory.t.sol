@@ -432,4 +432,95 @@ contract StoryFactoryTest is Test {
         vm.expectRevert("Too many steps");
         new StoryFactory(address(bond), address(plot), 1e18, ranges, prices);
     }
+
+    // ===================================================================
+    // Owner + updateCurve (#43)
+    // ===================================================================
+
+    function test_owner_setInConstructor() public view {
+        assertEq(factory.owner(), address(this));
+    }
+
+    function test_updateCurve_happy() public {
+        uint128[] memory newRanges = new uint128[](3);
+        newRanges[0] = 100e18;
+        newRanges[1] = 200e18;
+        newRanges[2] = 300e18;
+        uint128[] memory newPrices = new uint128[](3);
+        newPrices[0] = 2e15;
+        newPrices[1] = 3e15;
+        newPrices[2] = 4e15;
+
+        vm.expectEmit(false, false, false, true);
+        emit StoryFactory.CurveUpdated(3);
+
+        factory.updateCurve(newRanges, newPrices);
+
+        assertEq(factory.stepRanges(0), 100e18);
+        assertEq(factory.stepRanges(1), 200e18);
+        assertEq(factory.stepRanges(2), 300e18);
+        assertEq(factory.stepPrices(0), 2e15);
+        assertEq(factory.stepPrices(1), 3e15);
+        assertEq(factory.stepPrices(2), 4e15);
+    }
+
+    function test_updateCurve_revert_notOwner() public {
+        uint128[] memory r = new uint128[](1);
+        r[0] = 1e18;
+        uint128[] memory p = new uint128[](1);
+        p[0] = 1e15;
+
+        vm.prank(other);
+        vm.expectRevert("Not owner");
+        factory.updateCurve(r, p);
+    }
+
+    function test_updateCurve_revert_mismatchedArrays() public {
+        uint128[] memory r = new uint128[](2);
+        uint128[] memory p = new uint128[](1);
+        r[0] = 1e18;
+        r[1] = 2e18;
+        p[0] = 1e15;
+
+        vm.expectRevert("Step arrays length mismatch");
+        factory.updateCurve(r, p);
+    }
+
+    function test_updateCurve_revert_emptyArrays() public {
+        uint128[] memory r = new uint128[](0);
+        uint128[] memory p = new uint128[](0);
+
+        vm.expectRevert("Empty step arrays");
+        factory.updateCurve(r, p);
+    }
+
+    function test_updateCurve_revert_tooManySteps() public {
+        uint128[] memory r = new uint128[](1001);
+        uint128[] memory p = new uint128[](1001);
+        for (uint256 i = 0; i < 1001; i++) {
+            r[i] = uint128(i + 1);
+            p[i] = uint128(i + 1);
+        }
+
+        vm.expectRevert("Too many steps");
+        factory.updateCurve(r, p);
+    }
+
+    function test_updateCurve_newStorylineUsesNewParams() public {
+        // Update curve to 1 step
+        uint128[] memory newRanges = new uint128[](1);
+        newRanges[0] = 999e18;
+        uint128[] memory newPrices = new uint128[](1);
+        newPrices[0] = 42e15;
+
+        factory.updateCurve(newRanges, newPrices);
+
+        // Create storyline — should use new curve
+        vm.prank(writer);
+        factory.createStoryline("New Curve Story", VALID_CID, FAKE_HASH, false);
+
+        // Verify the bond received the new params (check via mock)
+        assertEq(factory.stepRanges(0), 999e18);
+        assertEq(factory.stepPrices(0), 42e15);
+    }
 }

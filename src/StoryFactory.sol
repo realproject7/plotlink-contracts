@@ -44,6 +44,7 @@ contract StoryFactory {
     );
 
     event Donation(uint256 indexed storylineId, address indexed donor, uint256 amount);
+    event CurveUpdated(uint256 newStepCount);
 
     // -----------------------------------------------------------------------
     // Constants
@@ -59,13 +60,24 @@ contract StoryFactory {
     IMCV2_Bond public immutable BOND;
     IERC20 public immutable PLOT_TOKEN;
 
-    /// @notice Bonding curve step arrays (same for every storyline, set at deploy)
+    /// @notice Bonding curve step arrays (used for future storylines, updatable by owner)
     uint128[] public stepRanges;
     uint128[] public stepPrices;
     uint128 public immutable MAX_SUPPLY;
 
+    address public owner;
+
     mapping(uint256 => Storyline) public storylines;
     uint256 public storylineCount;
+
+    // -----------------------------------------------------------------------
+    // Modifiers
+    // -----------------------------------------------------------------------
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
 
     // -----------------------------------------------------------------------
     // Constructor
@@ -87,6 +99,7 @@ contract StoryFactory {
         BOND = IMCV2_Bond(_bond);
         PLOT_TOKEN = IERC20(_plotToken);
         MAX_SUPPLY = _maxSupply;
+        owner = msg.sender;
         stepRanges = _stepRanges;
         stepPrices = _stepPrices;
     }
@@ -129,6 +142,10 @@ contract StoryFactory {
         address tokenAddress = BOND.createToken{value: msg.value}(tp, bp);
 
         // 2. Transfer creator role to writer (royalties go directly to them)
+        // Trust assumption: MCV2_Bond is Mint Club's audited contract.
+        // updateBondCreator is expected to succeed if createToken succeeded.
+        // No return value to check — if this silently fails, royalties
+        // would accrue to the factory with no recovery path.
         BOND.updateBondCreator(tokenAddress, msg.sender);
 
         // 3. Store storyline
@@ -183,6 +200,23 @@ contract StoryFactory {
     function hasSunset(uint256 storylineId) external view returns (bool) {
         Storyline storage s = storylines[storylineId];
         return s.hasDeadline && block.timestamp > uint256(s.lastPlotTime) + 168 hours;
+    }
+
+    // -----------------------------------------------------------------------
+    // updateCurve
+    // -----------------------------------------------------------------------
+
+    /// @notice Update bonding curve parameters for future storylines
+    /// @dev Existing storylines are unaffected — they already have their token on MCV2
+    /// @param newRanges New step ranges array
+    /// @param newPrices New step prices array
+    function updateCurve(uint128[] calldata newRanges, uint128[] calldata newPrices) external onlyOwner {
+        require(newRanges.length == newPrices.length, "Step arrays length mismatch");
+        require(newRanges.length > 0, "Empty step arrays");
+        require(newRanges.length <= 1000, "Too many steps");
+        stepRanges = newRanges;
+        stepPrices = newPrices;
+        emit CurveUpdated(newRanges.length);
     }
 
     // -----------------------------------------------------------------------
