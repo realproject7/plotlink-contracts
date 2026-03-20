@@ -434,11 +434,30 @@ contract E2ETest is Script {
         console.log("[F5] Buy/sell royalty diff              PASS  cost=%d  refund=%d", buyCost, sellRefund);
         scenariosPassed++;
 
+        // F6: updateCurve by owner + create storyline with new curve
+        uint128[] memory newRanges = new uint128[](2);
+        newRanges[0] = 500_000e18;
+        newRanges[1] = 1_000_000e18;
+        uint128[] memory newPrices = new uint128[](2);
+        newPrices[0] = 2e15; // 0.002 PL_TEST (double the original)
+        newPrices[1] = 2e18;
+        FACTORY.updateCurve(newRanges, newPrices);
+        console.log("[F6] updateCurve by owner              PASS");
+
+        uint256 idF6 = FACTORY.createStoryline{value: creationFee}("Updated Curve Story", CID_46, HASH_A, false);
+        require(idF6 > 0, "F6: failed to create with new curve");
+        console.log("[F6] Create after updateCurve           PASS  storylineId=%d", idF6);
+        scenariosPassed += 2;
+
+        // Restore original curve (500 steps) to leave contract in clean state
+        // Not practical in broadcast — skip restore. The curve is now 2-step.
+
         // Serialize edge case storyline IDs
         string memory fKey = "edgeCasesF";
         vm.serializeUint(fKey, "f1StorylineId", idF1);
         vm.serializeAddress(fKey, "f1Token", tokenF1);
-        string memory fJson = vm.serializeUint(fKey, "f2StorylineId", idF2);
+        vm.serializeUint(fKey, "f2StorylineId", idF2);
+        string memory fJson = vm.serializeUint(fKey, "f6StorylineId", idF6);
         vm.serializeString(resultsJson, "edgeCasesF", fJson);
     }
 }

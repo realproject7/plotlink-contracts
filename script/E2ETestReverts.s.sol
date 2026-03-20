@@ -204,6 +204,67 @@ contract E2ETestReverts is Script {
         console.log("[G1] hasSunset (no deadline) = false   PASS");
         scenariosPassed++;
 
+        // G2: hasSunset on expired deadline storyline
+        // Read storylineA2 which has hasDeadline from e2e-results.json
+        uint256 idA2 = vm.parseJsonUint(json, ".storylineA2.storylineId");
+        bool a2HasDeadline = vm.parseJsonBool(json, ".storylineA2.hasDeadline");
+        if (!a2HasDeadline) {
+            // A2 has no deadline — hasSunset should be false even after warp
+            vm.warp(block.timestamp + 365 days);
+            bool sunset2 = FACTORY.hasSunset(idA2);
+            require(!sunset2, "G2: hasSunset should be false without deadline even after warp");
+            console.log("[G2] hasSunset (no deadline, warped)    PASS");
+        } else {
+            // A2 has deadline — warp past it
+            vm.warp(block.timestamp + 169 hours);
+            bool sunset2 = FACTORY.hasSunset(idA2);
+            require(sunset2, "G2: hasSunset should be true after deadline");
+            console.log("[G2] hasSunset (expired deadline)       PASS");
+        }
+        scenariosPassed++;
+
+        // ===== Group H: Constructor validations (simulation only) =====
+        console.log("");
+        console.log("--- Group H: Constructor validations ---");
+
+        uint128[] memory r1 = new uint128[](1);
+        r1[0] = 1e18;
+        uint128[] memory p1 = new uint128[](1);
+        p1[0] = 1e15;
+
+        // H1: Zero bond address
+        try new StoryFactory(address(0), address(1), 1e18, r1, p1) {
+            revert("H1: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Zero bond address"), "H1: wrong revert reason");
+            console.log('[H1] Zero bond address reverts         PASS  "Zero bond address"');
+            scenariosPassed++;
+        }
+
+        // H2: Zero token address
+        try new StoryFactory(address(1), address(0), 1e18, r1, p1) {
+            revert("H2: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Zero token address"), "H2: wrong revert reason");
+            console.log('[H2] Zero token address reverts        PASS  "Zero token address"');
+            scenariosPassed++;
+        }
+
+        // H3: Too many steps (>1000)
+        uint128[] memory bigR = new uint128[](1001);
+        uint128[] memory bigP = new uint128[](1001);
+        for (uint256 i = 0; i < 1001; i++) {
+            bigR[i] = uint128(i + 1);
+            bigP[i] = uint128(i + 1);
+        }
+        try new StoryFactory(address(1), address(1), 1e18, bigR, bigP) {
+            revert("H3: should have reverted");
+        } catch Error(string memory reason) {
+            require(keccak256(bytes(reason)) == keccak256("Too many steps"), "H3: wrong revert reason");
+            console.log('[H3] >1000 steps reverts               PASS  "Too many steps"');
+            scenariosPassed++;
+        }
+
         console.log("");
         console.log("=== ALL REVERT TESTS PASSED ===");
         console.log("Scenarios passed:", scenariosPassed);
