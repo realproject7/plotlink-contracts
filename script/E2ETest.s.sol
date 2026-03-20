@@ -141,7 +141,7 @@ contract E2ETest is Script {
 
         // A1: Create storyline WITH deadline, chain 3 plots
         idA1 = FACTORY.createStoryline{value: creationFee}("E2E Story Alpha", CID_46, HASH_A, true);
-        (address w1, address t1, uint256 pc1,, bool hd1,) = FACTORY.storylines(idA1);
+        (address w1, address t1, uint24 pc1,, bool hd1) = FACTORY.storylines(idA1);
         require(w1 == deployer, "A1: writer mismatch");
         require(t1 != address(0), "A1: token is zero");
         require(pc1 == 1, "A1: plotCount != 1");
@@ -153,7 +153,7 @@ contract E2ETest is Script {
         FACTORY.chainPlot(idA1, "Chapter 2", CID_46, HASH_B);
         FACTORY.chainPlot(idA1, "Chapter 3", CID_46, HASH_C);
         FACTORY.chainPlot(idA1, "Chapter 4", CID_46, HASH_D);
-        (,, uint256 pc1b,,,) = FACTORY.storylines(idA1);
+        (,, uint24 pc1b,,) = FACTORY.storylines(idA1);
         require(pc1b == 4, "A1: plotCount != 4 after chaining");
         console.log("[A1] Chain plots 1/3, 2/3, 3/3         PASS  plotCount=%d", pc1b);
         scenariosPassed += 2; // A1 create + A1 chain
@@ -168,14 +168,14 @@ contract E2ETest is Script {
 
         // A2: Create storyline WITHOUT deadline, chain 1 plot
         idA2 = FACTORY.createStoryline{value: creationFee}("E2E Story Beta", CID_46, HASH_A, false);
-        (address w2, address t2, uint256 pc2,, bool hd2,) = FACTORY.storylines(idA2);
+        (address w2, address t2, uint24 pc2,, bool hd2) = FACTORY.storylines(idA2);
         require(w2 == deployer, "A2: writer mismatch");
         require(t2 != address(0), "A2: token is zero");
         require(pc2 == 1, "A2: plotCount != 1");
         require(hd2 == false, "A2: hasDeadline should be false");
 
         FACTORY.chainPlot(idA2, "Beta Chapter 2", CID_46, HASH_B);
-        (,, uint256 pc2b,,,) = FACTORY.storylines(idA2);
+        (,, uint24 pc2b,,) = FACTORY.storylines(idA2);
         require(pc2b == 2, "A2: plotCount != 2");
         console.log("[A2] Create storyline no deadline       PASS  storylineId=%d  plotCount=%d", idA2, pc2b);
         scenariosPassed++;
@@ -190,7 +190,7 @@ contract E2ETest is Script {
 
         // A3: Same wallet creates 2nd storyline (3rd total)
         idA3 = FACTORY.createStoryline{value: creationFee}("E2E Story Gamma", CID_46, HASH_A, false);
-        (address w3, address t3,,,,) = FACTORY.storylines(idA3);
+        (address w3, address t3,,,) = FACTORY.storylines(idA3);
         require(w3 == deployer, "A3: writer mismatch");
         require(t3 != address(0), "A3: token is zero");
         require(t3 != t1 && t3 != t2, "A3: token not unique");
@@ -409,13 +409,13 @@ contract E2ETest is Script {
 
         // F4: chainPlot with empty title (title not validated in chainPlot) — use F1's storyline
         FACTORY.chainPlot(idF1, "", CID_46, HASH_B);
-        (,, uint256 pc,,,) = FACTORY.storylines(idF1);
+        (,, uint24 pc,,) = FACTORY.storylines(idF1);
         require(pc == 2, "F4: plotCount should be 2");
         console.log("[F4] chainPlot with empty title        PASS  plotCount=%d", pc);
         scenariosPassed++;
 
         // F5: Buy then sell same amount - refund < cost due to royalties
-        (, address tokenF1,,,,) = FACTORY.storylines(idF1);
+        (, address tokenF1,,,) = FACTORY.storylines(idF1);
         IERC20Extended storyTokenF1 = IERC20Extended(tokenF1);
         storyTokenF1.approve(address(BOND), type(uint256).max);
 

@@ -13,12 +13,11 @@ contract StoryFactory {
     // -----------------------------------------------------------------------
 
     struct Storyline {
-        address writer; // sole author, royalty recipient
-        address token; // storyline token address on Mint Club
-        uint256 plotCount; // total plots chained
-        uint256 lastPlotTime; // timestamp of last plot (for deadline)
-        bool hasDeadline; // whether 168h (7-day) deadline is enabled
-        bool sunset; // true if deadline expired
+        address writer; // slot 1: sole author, royalty recipient (160 bits)
+        address token; // slot 2: storyline token address on Mint Club (160 bits)
+        uint24 plotCount; // slot 2: total plots chained (+24 = 184 bits)
+        uint40 lastPlotTime; // slot 2: timestamp of last plot (+40 = 224 bits)
+        bool hasDeadline; // slot 2: whether 168h deadline is enabled (+8 = 232 bits)
     }
 
     // -----------------------------------------------------------------------
@@ -50,8 +49,8 @@ contract StoryFactory {
     // Constants
     // -----------------------------------------------------------------------
 
-    uint16 public constant MINT_ROYALTY = 500; // 5% (basis points, base 10000)
-    uint16 public constant BURN_ROYALTY = 500; // 5%
+    uint16 public constant MINT_ROYALTY = 100; // 1% (basis points, base 10000)
+    uint16 public constant BURN_ROYALTY = 100; // 1%
 
     // -----------------------------------------------------------------------
     // State
@@ -133,9 +132,8 @@ contract StoryFactory {
             writer: msg.sender,
             token: tokenAddress,
             plotCount: 1,
-            lastPlotTime: block.timestamp,
-            hasDeadline: hasDeadline,
-            sunset: false
+            lastPlotTime: uint40(block.timestamp),
+            hasDeadline: hasDeadline
         });
 
         // 4. Emit events
@@ -158,16 +156,27 @@ contract StoryFactory {
         Storyline storage s = storylines[storylineId];
         require(msg.sender == s.writer, "Not writer");
         require(bytes(contentCID).length >= 46 && bytes(contentCID).length <= 100, "Invalid CID");
-        require(!s.sunset, "Storyline sunset");
         if (s.hasDeadline) {
-            require(block.timestamp <= s.lastPlotTime + 168 hours, "Deadline passed");
+            require(block.timestamp <= uint256(s.lastPlotTime) + 168 hours, "Deadline passed");
         }
 
         uint256 plotIndex = s.plotCount; // genesis = 0, so first chain = 1
         s.plotCount++;
-        s.lastPlotTime = block.timestamp;
+        s.lastPlotTime = uint40(block.timestamp);
 
         emit PlotChained(storylineId, plotIndex, msg.sender, title, contentCID, contentHash);
+    }
+
+    // -----------------------------------------------------------------------
+    // hasSunset
+    // -----------------------------------------------------------------------
+
+    /// @notice Check if a storyline's deadline has expired
+    /// @param storylineId The storyline to check
+    /// @return True if the storyline has a deadline and it has passed
+    function hasSunset(uint256 storylineId) external view returns (bool) {
+        Storyline storage s = storylines[storylineId];
+        return s.hasDeadline && block.timestamp > uint256(s.lastPlotTime) + 168 hours;
     }
 
     // -----------------------------------------------------------------------
