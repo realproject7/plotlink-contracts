@@ -533,6 +533,7 @@ contract E2ETest is Script {
         (,, uint256 pc,,,) = FACTORY.storylines(idF1);
         require(pc == 2, "F4: plotCount should be 2");
         console.log("[F4] chainPlot with empty title        PASS  plotCount=%d", pc);
+        scenariosPassed++;
 
         // F5: Buy then sell same amount - refund < cost due to royalties
         (, address tokenF1,,,,) = FACTORY.storylines(idF1);
