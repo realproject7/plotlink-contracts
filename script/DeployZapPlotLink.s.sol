@@ -13,6 +13,7 @@ contract DeployZapPlotLink is Script {
     // Base Sepolia addresses (fixed)
     address constant POOL_MANAGER = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
     address constant MCV2_BOND = 0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d;
+    address constant MCV2_BOND_PERIPHERY = 0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89;
     address constant WETH = 0x4200000000000000000000000000000000000006;
 
     // Pool parameters (must match pool creation)
@@ -44,7 +45,7 @@ contract DeployZapPlotLink is Script {
 
         vm.startBroadcast(deployerKey);
 
-        ZapPlotLink zap = new ZapPlotLink(POOL_MANAGER, MCV2_BOND, WETH, plTestAddr, poolKey);
+        ZapPlotLink zap = new ZapPlotLink(POOL_MANAGER, MCV2_BOND, MCV2_BOND_PERIPHERY, WETH, plTestAddr, poolKey);
 
         vm.stopBroadcast();
 
