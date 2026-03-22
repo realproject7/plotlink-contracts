@@ -32,9 +32,9 @@ contract ZapPlotLinkV2 {
     address public constant HUNT = 0x37f0c2915CeCC7e977183B8543Fc0864d03E064C;
     address public constant ETH_ADDRESS = address(0);
 
-    // ============ Uniswap V4 Pool Parameters (0.3% fee) ============
-    uint24 public constant POOL_FEE = 3000;
-    int24 public constant TICK_SPACING = 60;
+    // ============ Uniswap V4 Pool Parameters (owner-updatable) ============
+    uint24 public poolFee = 3000;
+    int24 public poolTickSpacing = 60;
 
     // ============ External Contracts (Base Mainnet) ============
     IUniversalRouter public constant UNIVERSAL_ROUTER = IUniversalRouter(0x6fF5693b99212Da76ad316178A184AB56D299b43);
@@ -139,6 +139,12 @@ contract ZapPlotLinkV2 {
     function rescueETH(address payable to) external onlyOwner {
         (bool ok,) = to.call{value: address(this).balance}("");
         require(ok);
+    }
+
+    /// @notice Update pool fee and tick spacing (e.g., if migrating to a different pool tier)
+    function setPoolKey(uint24 newFee, int24 newTickSpacing) external onlyOwner {
+        poolFee = newFee;
+        poolTickSpacing = newTickSpacing;
     }
 
     // ============ External Mint Functions ============
@@ -248,18 +254,43 @@ contract ZapPlotLinkV2 {
         (storylineAmount,) = BOND_PERIPHERY.getTokensForReserve(storylineToken, plotAmount, false);
     }
 
+    // ============ Pool Key Sorting ============
+
+    /// @dev Sort fromToken and plotToken into canonical V4 pool key order.
+    ///      currency0 < currency1 is required by Uniswap V4.
+    ///      zeroForOne = true means we're swapping currency0 for currency1.
+    function _sortPoolKey(address fromToken)
+        private
+        view
+        returns (address currency0, address currency1, bool zeroForOne)
+    {
+        if (fromToken == ETH_ADDRESS) {
+            // ETH (address(0)) is always the lowest
+            currency0 = ETH_ADDRESS;
+            currency1 = plotToken;
+            zeroForOne = true; // swapping ETH (currency0) for PLOT (currency1)
+        } else if (uint160(fromToken) < uint160(plotToken)) {
+            currency0 = fromToken;
+            currency1 = plotToken;
+            zeroForOne = true; // swapping fromToken (currency0) for PLOT (currency1)
+        } else {
+            currency0 = plotToken;
+            currency1 = fromToken;
+            zeroForOne = false; // swapping fromToken (currency1) for PLOT (currency0)
+        }
+    }
+
     // ============ Internal Functions ============
 
     function _buildQuoteParams(address fromToken, uint128 amount) private view returns (QuoteExactSingleParams memory) {
-        (address currency0, address currency1, bool zeroForOne) =
-            fromToken == ETH_ADDRESS ? (ETH_ADDRESS, plotToken, true) : (plotToken, fromToken, false);
+        (address currency0, address currency1, bool zeroForOne) = _sortPoolKey(fromToken);
 
         return QuoteExactSingleParams({
             poolKey: PoolKey({
                 currency0: currency0,
                 currency1: currency1,
-                fee: POOL_FEE,
-                tickSpacing: TICK_SPACING,
+                fee: poolFee,
+                tickSpacing: poolTickSpacing,
                 hooks: IHooks(address(0))
             }),
             zeroForOne: zeroForOne,
@@ -288,8 +319,7 @@ contract ZapPlotLinkV2 {
     function _executeV4Swap(address fromToken, uint256 amountIn) private returns (uint256 plotReceived) {
         uint256 plotBefore = IERC20(plotToken).balanceOf(address(this));
 
-        (address currency0, address currency1, bool zeroForOne) =
-            fromToken == ETH_ADDRESS ? (ETH_ADDRESS, plotToken, true) : (plotToken, fromToken, false);
+        (address currency0, address currency1, bool zeroForOne) = _sortPoolKey(fromToken);
 
         bytes memory commands = abi.encodePacked(uint8(Commands.V4_SWAP));
         bytes[] memory inputs = new bytes[](1);
@@ -312,8 +342,7 @@ contract ZapPlotLinkV2 {
         uint256 balanceBefore =
             fromToken == ETH_ADDRESS ? address(this).balance : IERC20(fromToken).balanceOf(address(this));
 
-        (address currency0, address currency1, bool zeroForOne) =
-            fromToken == ETH_ADDRESS ? (ETH_ADDRESS, plotToken, true) : (plotToken, fromToken, false);
+        (address currency0, address currency1, bool zeroForOne) = _sortPoolKey(fromToken);
 
         bytes memory swapInput =
             _buildV4SwapInputExactOut(currency0, currency1, zeroForOne, uint128(plotAmountOut), uint128(amountInMax));
@@ -367,8 +396,8 @@ contract ZapPlotLinkV2 {
         PoolKey memory poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
-            fee: POOL_FEE,
-            tickSpacing: TICK_SPACING,
+            fee: poolFee,
+            tickSpacing: poolTickSpacing,
             hooks: IHooks(address(0))
         });
 
@@ -401,8 +430,8 @@ contract ZapPlotLinkV2 {
         PoolKey memory poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
-            fee: POOL_FEE,
-            tickSpacing: TICK_SPACING,
+            fee: poolFee,
+            tickSpacing: poolTickSpacing,
             hooks: IHooks(address(0))
         });
 
