@@ -483,7 +483,10 @@ contract ZapPlotLinkV2 {
             hookData: bytes("")
         });
 
-        actionParams[0] = abi.encode(USDC, path, amountIn, uint128(0));
+        // V4 Router's CalldataDecoder.decodeSwapExactInParams reads the first word as
+        // an offset pointer to the struct data. _encodeAsStruct prepends 0x20 to match
+        // the ABI encoding of a single struct parameter (abi.encode(ExactInputParams)).
+        actionParams[0] = _encodeAsStruct(abi.encode(USDC, path, amountIn, uint128(0)));
         actionParams[1] = abi.encode(USDC, amountIn);
         actionParams[2] = abi.encode(plotToken, address(this), ActionConstants.OPEN_DELTA);
 
@@ -520,7 +523,7 @@ contract ZapPlotLinkV2 {
             hookData: bytes("")
         });
 
-        actionParams[0] = abi.encode(plotToken, path, plotAmountOut, maxUsdcIn);
+        actionParams[0] = _encodeAsStruct(abi.encode(plotToken, path, plotAmountOut, maxUsdcIn));
         actionParams[1] = abi.encode(USDC, maxUsdcIn);
         actionParams[2] = abi.encode(plotToken, address(this), ActionConstants.OPEN_DELTA);
 
@@ -529,6 +532,15 @@ contract ZapPlotLinkV2 {
         inputs[0] = abi.encode(actions, actionParams);
 
         UNIVERSAL_ROUTER.execute(commands, inputs, block.timestamp);
+    }
+
+    /// @dev Wraps ABI-encoded fields with an outer offset word (0x20) to match
+    ///      struct-style ABI encoding expected by the V4 Router's CalldataDecoder.
+    ///      decodeSwapExactInParams/decodeSwapExactOutParams read the first word
+    ///      of params as an offset pointer to the struct data. abi.encode(field1, ...)
+    ///      produces a flat tuple without this offset; this function adds it.
+    function _encodeAsStruct(bytes memory data) private pure returns (bytes memory) {
+        return abi.encodePacked(uint256(0x20), data);
     }
 
     function _refundPlot() private {

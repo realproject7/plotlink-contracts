@@ -18,7 +18,7 @@ contract E2EZapTest is Script {
     // -----------------------------------------------------------------------
     // Base mainnet addresses
     // -----------------------------------------------------------------------
-    ZapPlotLinkV2 constant ZAP = ZapPlotLinkV2(payable(0x7bC192848003ab1Ba286C66AFD0dd8a1729c6b02));
+    ZapPlotLinkV2 constant ZAP = ZapPlotLinkV2(payable(0xAe50C9444DA2Ac80B209dC8B416d1B4A7D3939B0));
     IMCV2_Bond constant BOND = IMCV2_Bond(0xc5a076cad94176c2996B32d8466Be1cE757FAa27);
     IERC20 constant PLOT = IERC20(0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1);
     IERC20 constant HUNT = IERC20(0x37f0c2915CeCC7e977183B8543Fc0864d03E064C);
