@@ -43,6 +43,20 @@ struct QuoteExactSingleParams {
     bytes hookData;
 }
 
+struct PathKey {
+    address intermediateCurrency;
+    uint24 fee;
+    int24 tickSpacing;
+    IHooks hooks;
+    bytes hookData;
+}
+
+struct QuoteExactParams {
+    address exactCurrency;
+    PathKey[] path;
+    uint128 exactAmount;
+}
+
 interface IV4Quoter {
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         external
@@ -51,6 +65,10 @@ interface IV4Quoter {
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
         external
         returns (uint256 amountIn, uint256 gasEstimate);
+
+    function quoteExactInput(QuoteExactParams memory params) external returns (uint256 amountOut, uint256 gasEstimate);
+
+    function quoteExactOutput(QuoteExactParams memory params) external returns (uint256 amountIn, uint256 gasEstimate);
 }
 
 // ============ Mint Club V2 Interfaces ============
@@ -83,6 +101,8 @@ library Commands {
 }
 
 library Actions {
+    uint256 constant SWAP_EXACT_IN = 0x00;
+    uint256 constant SWAP_EXACT_OUT = 0x01;
     uint256 constant SWAP_EXACT_IN_SINGLE = 0x06;
     uint256 constant SWAP_EXACT_OUT_SINGLE = 0x08;
     uint256 constant SETTLE_ALL = 0x0c;
