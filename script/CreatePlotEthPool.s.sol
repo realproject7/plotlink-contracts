@@ -52,21 +52,7 @@ contract CreatePlotEthPool is Script {
         // Initial price: 1,000 PLOT = 0.001 ETH → 1 PLOT = 0.000001 ETH
         // price (token1/token0) = PLOT/ETH ... wait, V4 price = token1/token0
         // token0 = ETH (address(0)), token1 = PLOT
-        // price = PLOT_per_ETH? No: price = amount_of_token0 per token1
-        // sqrtPriceX96 = sqrt(price) * 2^96 where price = token1/token0
-        // Actually in V4: price = (token1 amount) / (token0 amount) when zeroForOne
-        // The sqrtPriceX96 represents sqrt(price) * 2^96 where price = token0/token1
-        // No — in V4: sqrtPriceX96 = sqrt(token1_per_token0) * 2^96...
-        // Let me use TickMath for a known tick instead.
-        //
-        // For 1 PLOT = 0.000001 ETH (i.e., 1 ETH = 1,000,000 PLOT):
-        // token0 = ETH, token1 = PLOT
-        // V4 price = token1/token0 (how many token1 per token0) = 1,000,000
-        // sqrtPrice = sqrt(1_000_000) = 1000
-        // sqrtPriceX96 = 1000 * 2^96 = 79_228_162_514_264_337_593_543_950_336_000
-        //
-        // Tick = log_{1.0001}(price) = log(1_000_000) / log(1.0001) ≈ 138163
-        // Round to tick spacing: 138163 / 60 * 60 = 138120
+        // Initial price: 1 ETH = 1,000,000 PLOT → tick ≈ 138163, rounded to spacing
         int24 initTick = int24(138_120);
         uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(initTick);
 
@@ -104,9 +90,8 @@ contract CreatePlotEthPool is Script {
         uint128 liquidity =
             LiquidityAmounts.getLiquidityForAmounts(sqrtPriceX96, sqrtLower, sqrtUpper, ETH_SEED, PLOT_SEED);
 
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR), uint8(Actions.SWEEP)
-        );
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR), uint8(Actions.SWEEP));
 
         bytes[] memory params = new bytes[](3);
         params[0] = abi.encode(poolKey, tickLower, tickUpper, liquidity, ETH_SEED, PLOT_SEED, deployer, "");

@@ -66,13 +66,9 @@ interface IV4Quoter {
         external
         returns (uint256 amountIn, uint256 gasEstimate);
 
-    function quoteExactInput(QuoteExactParams memory params)
-        external
-        returns (uint256 amountOut, uint256 gasEstimate);
+    function quoteExactInput(QuoteExactParams memory params) external returns (uint256 amountOut, uint256 gasEstimate);
 
-    function quoteExactOutput(QuoteExactParams memory params)
-        external
-        returns (uint256 amountIn, uint256 gasEstimate);
+    function quoteExactOutput(QuoteExactParams memory params) external returns (uint256 amountIn, uint256 gasEstimate);
 }
 
 // ============ Mint Club V2 Interfaces ============

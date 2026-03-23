@@ -235,7 +235,10 @@ contract ZapPlotLinkV2 {
             IERC20(plotToken).safeTransferFrom(msg.sender, address(this), fromTokenAmount);
             plotAmount = fromTokenAmount;
         } else if (fromToken == HUNT) {
-            // HUNT → PLOT via MCV2 bonding curve (skip Uniswap)
+            // HUNT → PLOT via MCV2 bonding curve (skip Uniswap).
+            // minTokensToMint=0 is safe: MCV2 bonding curves are deterministic (not an AMM),
+            // so the HUNT→PLOT rate cannot be manipulated. End-to-end slippage is enforced
+            // by minStorylineAmount on the subsequent storyline mint below.
             if (msg.value != 0) revert ZapPlotLink__InvalidETHAmount();
             IERC20(HUNT).safeTransferFrom(msg.sender, address(this), fromTokenAmount);
             plotAmount = BOND_PERIPHERY.mintWithReserveAmount(plotToken, fromTokenAmount, 0, address(this));
@@ -441,8 +444,9 @@ contract ZapPlotLinkV2 {
         } else {
             // ETH → PLOT single-hop
             (address currency0, address currency1, bool zeroForOne) = _sortPoolKey(fromToken);
-            bytes memory swapInput =
-                _buildV4SwapInputExactOut(currency0, currency1, zeroForOne, uint128(plotAmountOut), uint128(amountInMax));
+            bytes memory swapInput = _buildV4SwapInputExactOut(
+                currency0, currency1, zeroForOne, uint128(plotAmountOut), uint128(amountInMax)
+            );
 
             bytes memory commands = abi.encodePacked(uint8(Commands.V4_SWAP), uint8(Commands.SWEEP));
             bytes[] memory inputs = new bytes[](2);
@@ -458,9 +462,8 @@ contract ZapPlotLinkV2 {
 
     /// @dev Execute USDC→ETH→PLOT multi-hop exact input via Universal Router
     function _executeV4MultiHopSwapExactIn(uint128 amountIn) private {
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.SWAP_EXACT_IN), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE)
-        );
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.SWAP_EXACT_IN), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE));
 
         bytes[] memory actionParams = new bytes[](3);
 
@@ -493,9 +496,8 @@ contract ZapPlotLinkV2 {
 
     /// @dev Execute USDC→ETH→PLOT multi-hop exact output via Universal Router
     function _executeV4MultiHopSwapExactOut(uint128 plotAmountOut, uint128 maxUsdcIn) private {
-        bytes memory actions = abi.encodePacked(
-            uint8(Actions.SWAP_EXACT_OUT), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE)
-        );
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.SWAP_EXACT_OUT), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE));
 
         bytes[] memory actionParams = new bytes[](3);
 
