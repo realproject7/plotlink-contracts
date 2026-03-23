@@ -9,7 +9,7 @@ On-chain storytelling protocol on Base. Writers create storylines backed by bond
 - `chainPlot()` — appends subsequent plots (chapters) to an existing storyline
 - `donate()` — direct tips from readers to writers
 
-Each storyline token trades on a Mint Club V2 bonding curve with 5% creator royalties on every buy and sell.
+Each storyline token trades on a Mint Club V2 bonding curve with 1% creator royalties on mint and 1% on burn.
 
 **ZapPlotLinkV2** enables one-click purchases with any supported token:
 
@@ -37,8 +37,6 @@ Each storyline token trades on a Mint Club V2 bonding curve with 5% creator roya
 | HUNT | `0x37f0c2915CeCC7e977183B8543Fc0864d03E064C` | Reserve token for PLOT |
 | Uniswap V4 Universal Router | `0x6fF5693b99212Da76ad316178A184AB56D299b43` | Swap execution |
 | Uniswap V4 Quoter | `0x0d5e0F971ED27FBfF6c2837bf31316121532048D` | Price estimation |
-| ERC-8004 Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Agent writer identity |
-
 ## Build
 
 ```bash
@@ -94,4 +92,4 @@ script/
 
 ## License
 
-BSD-3-Clause
+MIT
