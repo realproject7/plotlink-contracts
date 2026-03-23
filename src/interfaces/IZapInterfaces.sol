@@ -101,8 +101,8 @@ library Commands {
 }
 
 library Actions {
-    uint256 constant SWAP_EXACT_IN = 0x00;
-    uint256 constant SWAP_EXACT_OUT = 0x01;
+    uint256 constant SWAP_EXACT_IN = 0x07;
+    uint256 constant SWAP_EXACT_OUT = 0x09;
     uint256 constant SWAP_EXACT_IN_SINGLE = 0x06;
     uint256 constant SWAP_EXACT_OUT_SINGLE = 0x08;
     uint256 constant SETTLE_ALL = 0x0c;
