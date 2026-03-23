@@ -370,22 +370,24 @@ contract ZapPlotLinkV2 {
         return QuoteExactParams({exactCurrency: USDC, path: path, exactAmount: amount});
     }
 
-    /// @dev Build multi-hop quote params for USDC→ETH→PLOT exact output (path is reversed: PLOT→ETH→USDC)
+    /// @dev Build multi-hop quote params for USDC→ETH→PLOT exact output.
+    ///      V4 Quoter processes path in reverse (last→first), so array order is:
+    ///      path[0] = ETH→USDC leg (processed second), path[1] = PLOT→ETH leg (processed first).
     function _buildMultiHopQuoteOutput(uint128 amount) private view returns (QuoteExactParams memory) {
         PathKey[] memory path = new PathKey[](2);
-        // Reversed: PLOT → ETH (using PLOT/ETH pool)
+        // Processed second by quoter: ETH → USDC (using ETH/USDC pool)
         path[0] = PathKey({
-            intermediateCurrency: ETH_ADDRESS,
-            fee: poolFee,
-            tickSpacing: poolTickSpacing,
-            hooks: IHooks(address(0)),
-            hookData: bytes("")
-        });
-        // Reversed: ETH → USDC (using ETH/USDC pool)
-        path[1] = PathKey({
             intermediateCurrency: USDC,
             fee: usdcPoolFee,
             tickSpacing: usdcPoolTickSpacing,
+            hooks: IHooks(address(0)),
+            hookData: bytes("")
+        });
+        // Processed first by quoter: PLOT → ETH (using PLOT/ETH pool)
+        path[1] = PathKey({
+            intermediateCurrency: ETH_ADDRESS,
+            fee: poolFee,
+            tickSpacing: poolTickSpacing,
             hooks: IHooks(address(0)),
             hookData: bytes("")
         });
@@ -497,19 +499,21 @@ contract ZapPlotLinkV2 {
 
         bytes[] memory actionParams = new bytes[](3);
 
-        // Path is reversed for exact output: PLOT → ETH → USDC
+        // V4 Router processes path in reverse for exact output (last→first).
+        // path[1] processed first with currencyOut=PLOT → PLOT/ETH pool
+        // path[0] processed second with currencyOut=ETH → ETH/USDC pool
         PathKey[] memory path = new PathKey[](2);
         path[0] = PathKey({
-            intermediateCurrency: ETH_ADDRESS,
-            fee: poolFee,
-            tickSpacing: poolTickSpacing,
+            intermediateCurrency: USDC,
+            fee: usdcPoolFee,
+            tickSpacing: usdcPoolTickSpacing,
             hooks: IHooks(address(0)),
             hookData: bytes("")
         });
         path[1] = PathKey({
-            intermediateCurrency: USDC,
-            fee: usdcPoolFee,
-            tickSpacing: usdcPoolTickSpacing,
+            intermediateCurrency: ETH_ADDRESS,
+            fee: poolFee,
+            tickSpacing: poolTickSpacing,
             hooks: IHooks(address(0)),
             hookData: bytes("")
         });
