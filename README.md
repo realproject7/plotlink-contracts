@@ -24,8 +24,8 @@ Each storyline token trades on a Mint Club V2 bonding curve with 1% creator roya
 
 | Contract | Address |
 |----------|---------|
-| StoryFactory | [`0xfa5489b6710Ba2f8406b37fA8f8c3018e51FA229`](https://basescan.org/address/0xfa5489b6710Ba2f8406b37fA8f8c3018e51FA229) |
-| ZapPlotLinkV2 | [`0x04f557F8D2806B34FC832a534c08DF514D4dfEeF`](https://basescan.org/address/0x04f557F8D2806B34FC832a534c08DF514D4dfEeF) |
+| StoryFactory | [`0x337c5b96f03fB335b433291695A4171fd5dED8B0`](https://basescan.org/address/0x337c5b96f03fB335b433291695A4171fd5dED8B0) |
+| ZapPlotLinkV2 | [`0x952606df750C01e0a12458C3F814598B94AD5C5f`](https://basescan.org/address/0x952606df750C01e0a12458C3F814598B94AD5C5f) |
 
 ## External Dependencies
 
