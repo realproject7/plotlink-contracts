@@ -24,7 +24,8 @@ Each storyline token trades on a Mint Club V2 bonding curve with 1% creator roya
 
 | Contract | Address |
 |----------|---------|
-| StoryFactory | [`0x337c5b96f03fB335b433291695A4171fd5dED8B0`](https://basescan.org/address/0x337c5b96f03fB335b433291695A4171fd5dED8B0) |
+| StoryFactory (v2, J-curve) | [`0x92c3bd44fda84e632c3c3cb31387d0c0c1de618d`](https://basescan.org/address/0x92c3bd44fda84e632c3c3cb31387d0c0c1de618d) |
+| StoryFactory (v1, deprecated) | [`0x337c5b96f03fB335b433291695A4171fd5dED8B0`](https://basescan.org/address/0x337c5b96f03fB335b433291695A4171fd5dED8B0) |
 | ZapPlotLinkV2 | [`0xAe50C9444DA2Ac80B209dC8B416d1B4A7D3939B0`](https://basescan.org/address/0xAe50C9444DA2Ac80B209dC8B416d1B4A7D3939B0) |
 
 ## External Dependencies
@@ -33,7 +34,7 @@ Each storyline token trades on a Mint Club V2 bonding curve with 1% creator roya
 |----------|---------|------|
 | MCV2_Bond | `0xc5a076cad94176c2996B32d8466Be1cE757FAa27` | Bonding curve trading, token creation |
 | MCV2_BondPeriphery | `0x492C412369Db76C9cdD9939e6C521579301473a3` | Reverse calculations for mint |
-| PLOT | `0xF8A2C39111FCEB9C950aAf28A9E34EBaD99b85C1` | Protocol token (MCV2, backed by HUNT) |
+| PLOT | `0x4F567DACBF9D15A6acBe4A47FC2Ade0719Fb63C4` | Protocol token (MCV2, backed by HUNT) |
 | HUNT | `0x37f0c2915CeCC7e977183B8543Fc0864d03E064C` | Reserve token for PLOT |
 | Uniswap V4 Universal Router | `0x6fF5693b99212Da76ad316178A184AB56D299b43` | Swap execution |
 | Uniswap V4 Quoter | `0x0d5e0F971ED27FBfF6c2837bf31316121532048D` | Price estimation |
