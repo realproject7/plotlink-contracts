@@ -7,7 +7,7 @@ import {DeployBase} from "./DeployBase.s.sol";
 contract DumpCurve is Script {
     function run() external {
         DeployBase deploy = new DeployBase();
-        (uint128[] memory ranges, uint128[] memory prices) = deploy.generateCurve();
+        (uint128[] memory ranges, uint128[] memory prices) = deploy.getCurve();
 
         bytes32 priceHash = keccak256(abi.encodePacked(prices));
         bytes32 rangeHash = keccak256(abi.encodePacked(ranges));
